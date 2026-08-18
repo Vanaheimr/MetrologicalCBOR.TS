@@ -21,16 +21,16 @@ never heard of the tag still sees a well-formed array of standard numbers.
 
 ## Status
 
-**Early development.** The unit registry and the project scaffolding are in
-place; the codec is not. See [WORKPLAN.md](WORKPLAN.md) for the plan and its
-work packages.
+**Early development.** The unit registry and a deterministic CBOR core are in
+place; the tag 44252 codec is not. See [WORKPLAN.md](WORKPLAN.md) for the plan
+and its work packages.
 
 | Work package | State |
 |---|---|
 | WP0 — Scaffolding: build, tests, lint, CI, license | done |
 | WP1 — Unit registry from specification Section 4 | done |
-| WP2 — Minimal deterministic CBOR core | next |
-| WP3 — Domain model and validation | planned |
+| WP2 — Minimal deterministic CBOR core | done |
+| WP3 — Domain model and validation | next |
 | WP4 — Tag 44252 codec | planned |
 | WP5 — Text format: grammar, renderer, parser | planned |
 | WP6 — Document-level CBOR/JSON conversion | planned |
@@ -64,6 +64,24 @@ registry.byId(Units.DegreeCelsius);   // affine: true
 
 METROLOGICAL_VALUE_TAG;               // 44252
 ```
+
+The CBOR core reads and writes the format the tag lives in:
+
+```ts
+import { decodeHex, encodeToHex, diagnostic, walk } from '@vanaheimr/metrological-cbor';
+
+const reading = decodeHex('D9ACDC 83 C482201832 04 22');
+
+diagnostic(reading);        // '44252([4([-1, 50]), 4, -3])'  — 5.0 mA
+encodeToHex(reading);       // back to the identical bytes
+```
+
+Integers are integers whatever their magnitude — a bignum mantissa is a
+`bigint`, not a lost decimal place — and the encoder is deterministic, so the
+same value always produces the same bytes and therefore the same signature.
+Decoding is strict by default: anything that is not the encoding a
+deterministic encoder would have produced is rejected, which is what data that
+was signed requires.
 
 Lookups reject rather than guess, because a value silently attributed to the
 wrong unit is worse than a decoding failure:

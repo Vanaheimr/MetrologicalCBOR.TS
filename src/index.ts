@@ -28,11 +28,34 @@
 export { METROLOGICAL_VALUE_TAG } from './tag.js';
 
 export {
+    CborError,
     McborError,
     UnitError,
     type McborErrorCode,
     type McborErrorOptions,
 } from './errors.js';
+
+export * as cbor from './cbor/index.js';
+
+export {
+    decode,
+    decodeFirst,
+    decodeHex,
+    encode,
+    encodeToHex,
+    bytesToHex,
+    hexToBytes,
+    diagnostic,
+    transform,
+    walk,
+    DEFAULT_LIMITS,
+    type CborPath,
+    type CborValue,
+    type DecodeLimits,
+    type DecodeOptions,
+    type DecodeResult,
+    type EncodeOptions,
+} from './cbor/index.js';
 
 export { UnitRegistry } from './registry/index.js';
 

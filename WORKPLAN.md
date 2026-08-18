@@ -204,13 +204,27 @@ Estimates are focused person-days for one senior TypeScript developer, including
 - `spec/` is git-ignored, so a fresh checkout has none. `npm run fetch:spec` downloads it from the public whitepaper repository, and CI runs that before the tests — with `continue-on-error` so a network failure never blocks a pull request, and without it in the nightly workflow, so a persistent problem surfaces within a day. Absent the spec the suite skips (42 pass, 22 skip, 0 fail) rather than breaking.
 - *Still open:* the decoder questions A5/A6.
 
-### WP2 — CBOR core (4–6 d)
+### WP2 — CBOR core (4–6 d) — **done 2026-08-18**
 
 - Reader: ints (64-bit via `bigint`), bignums (tag 2/3), decimal fractions (tag 4), text/byte strings, arrays, maps, nested tags, simple values; well-formedness per RFC 8949 §5 (duplicate map keys rejected).
 - Deterministic writer per RFC 8949 §4.2.1: shortest heads, definite lengths, bytewise-sorted map keys.
 - Document walker (visitor over a lazily-decoded tree) — the substrate for WP6 and for embedding tag 44252 in host documents.
 - Decode limits: max nesting, max byte/element counts, max bignum bytes.
-- **Acceptance:** round-trip property tests (decode∘encode = id on deterministic input); RFC 8949 Appendix A vectors for the supported subset; the 713-byte worked-example record walks without loss (tags 18/0 treated as opaque tags).
+- **Acceptance:** met. 467 tests pass; RFC 8949 Appendix A vectors round-trip byte-exact; 40 000 property-based cases over generated values and over random byte soup; the 713-byte worked-example record decodes, walks three levels of nesting and re-encodes to the identical bytes. Coverage 97 % of statements, 95 % of branches.
+
+**Design decisions taken here**
+
+- **Integers are one type.** Major types 0 and 1 and the bignum tags 2 and 3 all decode to a `bigint`, and the writer picks the preferred encoding for the magnitude. Nothing above the core has to know where the 64-bit boundary falls — which matters, because a metrological mantissa may cross it. The consequence is that a hand-built `tag(2, bytes)` is *rejected* by the encoder rather than written: it is a shape no decoded document ever has, and encoding it would produce bytes that decode to something else.
+- **Tags stay uninterpreted otherwise.** The core knows the shape of CBOR, not the meaning of tag 4 or 44252. That is what makes it usable for walking documents whose tags this library has never heard of.
+- **`encode` gained `mapKeys: 'preserve'`** alongside `floats: 'preserve'`, forced by the finding below.
+
+**Findings**
+
+- **The worked example's carrying document is not deterministically encoded.** Its meter-reading map is in a human order (`meter, transaction, context, time, energy`), not the bytewise order §4.2.1 sorts into. This is correct and consistent with spec §6, which scopes the deterministic requirement to the *metrological value*, not to the structure carrying it. Two consequences the plan had not anticipated: re-serialising a foreign signed document needs a preserve mode, or the library would silently invalidate signatures it never touched; and strictness is *per layer*, since the outer COSE structure is deterministic while the payload it wraps as an opaque byte string is not.
+- **A duplicate map key need not be adjacent.** The first implementation compared neighbours, which is sufficient only in a sorted map. Found while decoding the example in lenient mode; now a set over the whole map, in both reader and writer.
+- **Strict mode must require the shortest float width**, including that a NaN is exactly `f97e00` (§4.2.2). A property test over random bytes found `f97c01` — a NaN with a different payload — round-tripping to different bytes.
+
+*Deviation from plan:* the document walker is eager rather than lazily decoding. Laziness is an optimisation, and nothing in WP6 needs it; `walk` and `transform` over a decoded tree are what the JSON conversion will use.
 
 ### WP3 — Domain model and validation (3–4 d)
 
@@ -307,7 +321,7 @@ Versioning: SemVer; 0.x during WP4–WP7 (published early — real feedback beat
 | Milestone | Contents | Exit criterion | Est. cumulative |
 |---|---|---|---|
 | ~~M0~~ | ~~WP0~~ | **done 2026-08-18** — verify green, pack verified in ESM and CJS | 2 d |
-| M1 | ~~WP1~~ + WP2 | registry frozen and errata fixed **(done)**; CBOR core round-trips | 9 d |
+| ~~M1~~ | ~~WP1 + WP2~~ | **done 2026-08-18** — registry frozen, errata fixed, CBOR core round-trips the worked example byte-exact | 9 d |
 | M2 | WP3 + WP4 → **v0.1.0** | all §5 vectors byte-exact | 15 d |
 | M3 | WP5 → **v0.2.0** | grammar frozen, lossless text round-trip | 21 d |
 | M4 | WP6 → **v0.3.0** | document JSON round-trip | 24 d |
@@ -328,7 +342,7 @@ Total ≈ **24–36 focused person-days** (the table shows mid-range). Calendar 
 | Unicode homoglyphs (µ/μ, Ω/Ω) and superscripts | parse failures or duplicated spellings | NFC + explicit homoglyph normalization in the grammar, fixture-tested |
 | Float leakage (JS ecosystem habit) | resolution loss — spec violation | `bigint` end to end; ESLint rule banning `Number` in `model/`/`codec/`/`text/`; property tests compare exact strings |
 | JSON consumers mangling big numbers | data corruption outside our API | numbers > 2⁵³−1 become strings by default; documented |
-| Own CBOR core bugs | correctness | small frozen subset, RFC vectors, fuzzing, 100 % branch coverage on codec paths |
+| Own CBOR core bugs | correctness | **largely mitigated:** RFC 8949 Appendix A vectors, 40 000 property-based cases including random byte soup, the worked example end to end; 95 % branch coverage. The 100 % target for `codec/` and `text/` stays with WP7 |
 
 ---
 

@@ -40,7 +40,37 @@ export type McborErrorCode =
     | 'ERR_UNIT_ID_NOT_PRIVATE_USE'
 
     /** A private-use registration whose identification or symbol is already taken. */
-    | 'ERR_REGISTRY_CONFLICT';
+    | 'ERR_REGISTRY_CONFLICT'
+
+    /** The input ended in the middle of a data item. RFC 8949, Section 5.1. */
+    | 'ERR_CBOR_UNEXPECTED_END'
+
+    /** The input is not well-formed CBOR. RFC 8949, Section 5.1. */
+    | 'ERR_CBOR_MALFORMED'
+
+    /** A complete data item was decoded, but bytes followed it. */
+    | 'ERR_CBOR_TRAILING_DATA'
+
+    /** A text string is not valid UTF-8. RFC 8949, Section 3.1. */
+    | 'ERR_CBOR_INVALID_UTF8'
+
+    /** An argument was not encoded in the shortest form. RFC 8949, Section 4.2.1. */
+    | 'ERR_CBOR_NON_PREFERRED'
+
+    /** An indefinite-length item, which deterministic encoding forbids. RFC 8949, Section 4.2.1. */
+    | 'ERR_CBOR_INDEFINITE_LENGTH'
+
+    /** A map contains the same key twice. RFC 8949, Section 5.6. */
+    | 'ERR_CBOR_DUPLICATE_KEY'
+
+    /** The keys of a map are not in bytewise lexicographic order. RFC 8949, Section 4.2.1. */
+    | 'ERR_CBOR_UNSORTED_KEYS'
+
+    /** Decoding would exceed a configured resource limit. Specification Section 7. */
+    | 'ERR_CBOR_LIMIT_EXCEEDED'
+
+    /** A value cannot be encoded, for example a map with a duplicate key. */
+    | 'ERR_CBOR_UNENCODABLE';
 
 
 export interface McborErrorOptions extends ErrorOptions {
@@ -89,5 +119,31 @@ export class McborError extends Error {
 export class UnitError extends McborError {
 
     override readonly name: string = 'UnitError';
+
+}
+
+
+/**
+ * The CBOR encoding itself is at fault: the bytes are not well-formed, they
+ * violate the deterministic encoding requirements, or they would cost more to
+ * decode than the configured limits allow.
+ */
+export class CborError extends McborError {
+
+    override readonly name: string = 'CborError';
+
+    /** The byte offset the fault was detected at, where one applies. */
+    readonly offset: number | undefined;
+
+    constructor(code:     McborErrorCode,
+                message:  string,
+                options?: McborErrorOptions & { readonly offset?: number })
+    {
+        super(code, options?.offset === undefined
+                        ? message
+                        : `${message} (at byte ${String(options.offset)})`,
+              options);
+        this.offset = options?.offset;
+    }
 
 }

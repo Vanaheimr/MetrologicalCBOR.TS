@@ -4,9 +4,10 @@ coverage/
 *.tsbuildinfo
 .eslintcache
 
-# The specification is maintained in its own repository and is only a working
-# copy here. tests/registry/specification.test.ts compares the unit registry
-# against it entry by entry where it is present, and skips where it is not.
+# Fetched by `npm run fetch:spec` from the whitepaper repository, the same way
+# dist/ is produced by a build. tests/registry/specification.test.ts compares
+# the unit registry against it entry by entry where it is present, and skips
+# where it is not.
 spec/
 
 # Editors

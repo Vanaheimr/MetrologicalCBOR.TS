@@ -12,6 +12,26 @@ on the IANA registration of tag 44252 — see [WORKPLAN.md](WORKPLAN.md), WP8.
 
 ### Added
 
+- A minimal, deterministic CBOR implementation (RFC 8949) under `src/cbor`:
+  reader, deterministic writer, resource limits, diagnostic notation and a
+  document walker (WP2). No runtime dependencies.
+- The decoder has a strict mode, on by default, which requires the
+  deterministic encoding of RFC 8949 Section 4.2.1 — shortest arguments,
+  definite lengths, sorted and unique map keys, bignums only where a basic
+  integer will not do, floats in the shortest width that preserves them — and
+  a lenient mode that accepts and normalises those spellings while still
+  rejecting anything malformed or over a limit.
+- `encode` takes `mapKeys: 'preserve'` and `floats: 'preserve'` for
+  re-serialising a document this library did not produce. A signed document
+  whose maps are not sorted must keep the order it was signed in.
+- Integers of any magnitude are one type: major types 0 and 1 and the bignum
+  tags 2 and 3 all decode to a `bigint`, and the writer picks the preferred
+  encoding for the magnitude. Nothing above the core has to care where the
+  64-bit boundary falls, which matters because a metrological mantissa may
+  cross it.
+- Golden vectors from the worked example of the specification, extracted
+  mechanically by `npm run extract:example` rather than transcribed.
+
 - Project scaffolding: Apache-2.0 license, tsup build (ESM + CJS + type
   declarations), Vitest, ESLint flat configuration, GitHub Actions workflows
   for CI, nightly runs and releases (WP0).

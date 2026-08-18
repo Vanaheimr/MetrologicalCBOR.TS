@@ -69,7 +69,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "verify": "npm run check:registry && npm run typecheck && npm run lint && npm run test && npm run build",
-    "prepublishOnly": "npm run verify"
+    "prepublishOnly": "npm run verify",
+    "extract:example": "tsx scripts/extract-example.ts"
   },
   "peerDependencies": {
     "typescript": ">=5.4"
@@ -84,6 +85,7 @@
     "@types/node": "^26.2.0",
     "@vitest/coverage-v8": "^4.1.10",
     "eslint": "^10.8.1",
+    "fast-check": "^4.9.0",
     "globals": "^17.11.0",
     "tsup": "^8.5.1",
     "tsx": "^4.23.12",
