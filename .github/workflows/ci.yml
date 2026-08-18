@@ -50,28 +50,18 @@ jobs:
         run: npm run fetch:spec
         continue-on-error: true
 
-      - name: Verify the generated unit registry is in sync
-        run: npm run check:registry
-
-      - name: Type check
-        run: npm run typecheck
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Build
-        # Before the tests rather than after them: tests/bundle.test.ts loads
-        # the built bundle in a context with no Node globals at all, which is
-        # how "runs in a browser" stops being a claim and becomes a test. It
-        # skips where dist/ is absent, so building afterwards would leave it
-        # silently unrun.
-        run: npm run build
-
-      - name: Test
-        run: npm run test
-
-      - name: API documentation
-        run: npm run docs:api
+      - name: Verify
+        # One command rather than its parts spelled out again here. Twice now a
+        # check has existed in this file and not in `npm run verify`, and both
+        # times the gap was invisible until a release failed: a contributor ran
+        # verify, saw green, and CI ran something else. The script is the
+        # definition; this runs it.
+        #
+        # It builds before it tests, because tests/bundle.test.ts loads the
+        # built bundle in a context with no Node globals at all — which is how
+        # "runs in a browser" stops being a claim and becomes a test — and skips
+        # where dist/ is absent.
+        run: npm run verify
 
   examples:
     name: Examples

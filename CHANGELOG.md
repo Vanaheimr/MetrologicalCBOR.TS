@@ -60,6 +60,14 @@ freeze declared in 0.9.0 holds.
   `tsconfig.json` and `npm run typecheck:examples`, run by the CI job that
   installs them. Found by the release workflow on the first attempt, which is
   what a release workflow is for.
+- `npm run verify` is now what CI runs, rather than a list of steps repeated in
+  the workflow file beside it. Twice a check existed in one and not the other,
+  and both times the gap was invisible until a release failed: the API
+  documentation build was a CI step alone, so a README link added afterwards
+  broke it where nobody was looking. The script is the definition now, and it
+  builds the documentation too.
+- A README link pointed at the `examples/` directory rather than at a file,
+  which typedoc refuses to resolve.
 
 ### Known
 

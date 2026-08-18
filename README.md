@@ -247,7 +247,7 @@ byte, which a construction differing by one byte could not do.
 
 ## Examples
 
-Six runnable programs, in [examples/](examples/):
+Six runnable programs, in [examples/](examples/README.md):
 
 ```bash
 npx tsx examples/01-a-reading.ts
