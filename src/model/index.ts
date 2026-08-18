@@ -103,7 +103,6 @@ export {
     MetrologicalValue,
     compareQuantity,
     metrologicalValue,
-    sameNumericValue,
     sameQuantity,
     type MetrologicalValueChanges,
     type MetrologicalValueOptions,

@@ -29,8 +29,8 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { hexToBytes }           from '../../src/cbor/hex.js';
-import { decodeMetrologicalValue } from '../../src/codec/index.js';
+import { bytesToHex, hexToBytes } from '../../src/cbor/hex.js';
+import { decodeMetrologicalValue, encodeMetrologicalValue } from '../../src/codec/index.js';
 import { codeOf }               from '../support/errors.js';
 
 
@@ -51,6 +51,8 @@ const ALWAYS: readonly (readonly [hex: string, code: string, why: string])[] = [
     ['D9ACDC82F604',               'ERR_VALUE_TYPE',     'a null reading'],
     ['D9ACDC82C481200 4'.replace(/\s/g, ''), 'ERR_VALUE_TYPE', 'a decimal fraction that is not a pair'],
     ['D9ACDC82C48261610504',       'ERR_VALUE_TYPE',     'a decimal fraction with a text exponent'],
+    ['D9ACDC82C48220616104',       'ERR_VALUE_TYPE',     'a decimal fraction with a text mantissa'],
+    ['D9ACDC82C4821927110504',     'ERR_VALUE_EXPONENT_RANGE', 'a decimal exponent past the supported 10 000'],
 
     // -- Section 3.2: the unit -----------------------------------------------
     ['D9ACDC820500',               'ERR_UNIT_ID_RESERVED', 'the reserved identification 0'],
@@ -64,12 +66,17 @@ const ALWAYS: readonly (readonly [hex: string, code: string, why: string])[] = [
     ['D9ACDC820581820F820003',     'ERR_UNIT_EXPONENT_ZERO', 'a rational exponent with a zero numerator'],
     ['D9ACDC820581820F820100',     'ERR_UNIT_EXPONENT_DENOMINATOR', 'a rational exponent with a zero denominator'],
     ['D9ACDC820581820F820120',     'ERR_UNIT_EXPONENT_DENOMINATOR', 'a rational exponent with a negative denominator'],
+    ['D9ACDC820581820F6161',       'ERR_VALUE_TYPE',     'an exponent that is neither an integer nor a rational'],
+    ['D9ACDC820581820F83010203',   'ERR_VALUE_TYPE',     'a rational exponent of three parts'],
+    ['D9ACDC820581820F82616102',   'ERR_VALUE_TYPE',     'a rational exponent with a text numerator'],
+    ['D9ACDC820581820F1B0020000000000000', 'ERR_UNIT_EXPONENT_DENOMINATOR', 'an exponent past what a number holds exactly'],
 
     // -- Section 3.3: the prefix ---------------------------------------------
     ['D9ACDC83050404',             'ERR_PREFIX_INVALID', 'the prefix 4, which is not an SI prefix'],
     ['D9ACDC83050423',             'ERR_PREFIX_INVALID', 'the prefix -4'],
     ['D9ACDC830504181F',           'ERR_PREFIX_INVALID', 'the prefix 31'],
     ['D9ACDC8305046161',           'ERR_PREFIX_INVALID', 'a prefix that is not an integer'],
+    ['D9ACDC8305041B0020000000000000', 'ERR_PREFIX_INVALID', 'a prefix past what a number holds exactly'],
 
     // -- Section 3.4: the uncertainty ----------------------------------------
     ['D9ACDC840504002 0'.replace(/\s/g, ''), 'ERR_UNCERTAINTY_NEGATIVE', 'a negative uncertainty'],
@@ -79,6 +86,8 @@ const ALWAYS: readonly (readonly [hex: string, code: string, why: string])[] = [
     ['D9ACDC840504 00A2010103 02'.replace(/\s/g, ''), 'ERR_UNCERTAINTY_PROBABILITY', 'a coverage probability above one'],
     ['D9ACDC840504 00A2010104 00'.replace(/\s/g, ''), 'ERR_UNCERTAINTY_DISTRIBUTION', 'the distribution 0, which means not stated'],
     ['D9ACDC840504 00A2010104 06'.replace(/\s/g, ''), 'ERR_UNCERTAINTY_DISTRIBUTION', 'an unknown distribution'],
+    ['D9ACDC840504 00A2010104 6161'.replace(/\s/g, ''), 'ERR_UNCERTAINTY_DISTRIBUTION', 'a distribution written as a symbol'],
+    ['D9ACDC840504 00A2010104 1B0020000000000000'.replace(/\s/g, ''), 'ERR_UNCERTAINTY_DISTRIBUTION', 'a distribution past what a number holds exactly'],
     ['D9ACDC840504 00A2010105 00'.replace(/\s/g, ''), 'ERR_UNCERTAINTY_DEGREES_OF_FREEDOM', 'degrees of freedom of zero'],
     ['D9ACDC840504 00A2010106 01'.replace(/\s/g, ''), 'ERR_UNCERTAINTY_UNKNOWN_KEY', 'a key the specification does not define'],
     ['D9ACDC840504 00A2010161610 1'.replace(/\s/g, ''), 'ERR_UNCERTAINTY_UNKNOWN_KEY', 'a key that is not an integer'],
@@ -147,6 +156,24 @@ describe('spellings that strict mode refuses and lenient mode normalises', () =>
 
     });
 
+    it('rejects an uncertainty map that states nothing a bare number could not', () => {
+
+        // 44252([5, 4, 0, {1: 5}]) says exactly what 44252([5, 4, 0, 5]) says,
+        // and Section 6 does not allow one uncertainty two encodings.
+        const hex = 'D9ACDC84050400A10105';
+
+        expect(codeOf(() => decodeMetrologicalValue(hexToBytes(hex)))).toBe('ERR_UNCERTAINTY_REDUNDANT_MAP');
+
+        const lenient = decodeMetrologicalValue(hexToBytes(hex), { strict: false });
+
+        expect(lenient.uncertainty?.magnitude).toStrictEqual({ kind: 'int', value: 5n });
+
+        // And it is written back the compact way, which is what makes the
+        // rejection above a rule about spelling rather than about content.
+        expect(bytesToHex(encodeMetrologicalValue(lenient))).toBe('D9ACDC8405040005');
+
+    });
+
     it('accepts a prefix of 0 where an uncertainty follows it', () => {
 
         // There the prefix must be written, because the array is positional.
@@ -154,17 +181,38 @@ describe('spellings that strict mode refuses and lenient mode normalises', () =>
 
     });
 
-    it('normalises a rational exponent that reduces to a whole number', () => {
+    it('rejects a rational exponent that is not in lowest terms, and reduces it leniently', () => {
 
-        // [2, 1] is simply 2, and [-2, 4] is [-1, 2]. Decoders must reduce.
-        const reducible = decodeMetrologicalValue(hexToBytes('D9ACDC820581820F820201'));
-        const unreduced = decodeMetrologicalValue(hexToBytes('D9ACDC820581820F822104'));
+        // [2, 1] is simply 2, and [-2, 4] is [-1, 2]. Section 3.2 requires the
+        // reduced form, so neither spelling is one a conforming encoder writes.
+        //
+        // Found by the fuzz suite, through the identity a signature rests on:
+        // strict mode used to accept these and write the reduced form back, so
+        // decoding and re-encoding a signed document changed its bytes.
+        for (const hex of ['D9ACDC820581820F820201', 'D9ACDC820581820F822104', 'D9ACDC820581820F82140 2'.replace(/\s/g, '')])
+            expect(codeOf(() => decodeMetrologicalValue(hexToBytes(hex)))).toBe('ERR_UNIT_EXPONENT_NOT_REDUCED');
+
+        const reducible = decodeMetrologicalValue(hexToBytes('D9ACDC820581820F820201'), { strict: false });
+        const unreduced = decodeMetrologicalValue(hexToBytes('D9ACDC820581820F822104'), { strict: false });
 
         if (reducible.unit.kind !== 'product' || unreduced.unit.kind !== 'product')
             throw new Error('unreachable');
 
         expect(reducible.unit.factors[0]?.exponent).toStrictEqual({ kind: 'integer', value: 2 });
         expect(unreduced.unit.factors[0]?.exponent).toStrictEqual({ kind: 'rational', numerator: -1, denominator: 2 });
+
+    });
+
+    it('accepts a rational exponent that is already in lowest terms', () => {
+
+        // [-1, 2] is the reduced form, and Section 5 writes V·Hz^-1/2 with it.
+        const value = decodeMetrologicalValue(hexToBytes('D9ACDC820581820F822002'));
+
+        if (value.unit.kind !== 'product')
+            throw new Error('unreachable');
+
+        expect(value.unit.factors[0]?.exponent).toStrictEqual({ kind: 'rational', numerator: -1, denominator: 2 });
+        expect(bytesToHex(encodeMetrologicalValue(value))).toBe('D9ACDC820581820F822002');
 
     });
 

@@ -85,10 +85,22 @@ export function jsonToCbor(json: JsonValue, options?: FromJsonOptions): CborValu
 }
 
 
-function convert(json: JsonValue, path: JsonPath, options: FromJsonOptions): CborValue {
+function convert(json: JsonValue, path: JsonPath, options: FromJsonOptions, substituted = false): CborValue {
 
     if (json === null)
         return { type: 'null' };
+
+    // The value `JSON.stringify` would have written. An object that states its
+    // own JSON form is taken at its word, which is what makes a `Date` the
+    // instant it holds rather than the empty object its own fields spell —
+    // a timestamp is the commonest non-primitive in a measurement record, and
+    // losing it silently is exactly what this library must not do.
+    //
+    // Consulted once, as the serialisation algorithm consults it, so that a
+    // `toJSON` returning another object with a `toJSON` cannot recurse forever.
+    if (!substituted && typeof json === 'object' && typeof (json as { toJSON?: unknown }).toJSON === 'function')
+        return convert((json as unknown as { toJSON: (key: string) => JsonValue }).toJSON(String(path.at(-1) ?? '')),
+                       path, options, true);
 
     switch (typeof json) {
 

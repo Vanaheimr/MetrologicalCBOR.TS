@@ -236,7 +236,19 @@ function convertMap(entries: readonly (readonly [CborValue, CborValue])[],
             throw new McborError('ERR_JSON_KEY',
                                  `Two map keys become the same JSON name ${JSON.stringify(name)}${where(path)}.`);
 
-        out[name] = convert(value, [...path, name], options);
+        // Defined rather than assigned, because assignment does not mean what
+        // it appears to for two names. `out.__proto__ = x` sets the prototype
+        // instead of adding a member: a document carrying that key would come
+        // back without it, and one carrying a map under it would come back as
+        // an object whose prototype the document chose - reporting no keys at
+        // all while answering to the ones it was given. `JSON.parse` defines
+        // the property, and this now agrees with it.
+        Object.defineProperty(out, name, {
+            value:        convert(value, [...path, name], options),
+            writable:     true,
+            enumerable:   true,
+            configurable: true,
+        });
 
     }
 

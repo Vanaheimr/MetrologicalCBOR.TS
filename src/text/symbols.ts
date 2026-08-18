@@ -24,6 +24,8 @@
  * compatibility mapping that no normalisation reconciles.
  */
 
+import { invariant } from '../invariant.js';
+
 /** MIDDLE DOT: what separates the factors of a product of powers. */
 export const MIDDLE_DOT = '\u00B7';
 
@@ -64,8 +66,13 @@ export function toSuperscript(value: number): string {
 
     let out = value < 0 ? SUPERSCRIPT_MINUS : '';
 
+    // Asserted rather than defaulted: the only way to reach a character that is
+    // not a digit here is an exponent large enough for toString to write it in
+    // exponential notation, and quietly emitting the `e` would produce a unit
+    // that parses back as something else entirely.
     for (const digit of digits)
-        out += SUPERSCRIPT_DIGITS[Number.parseInt(digit, 10)] ?? digit;
+        out += invariant(SUPERSCRIPT_DIGITS[Number.parseInt(digit, 10)],
+                         `a superscript for the character ${JSON.stringify(digit)}`);
 
     return out;
 

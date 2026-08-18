@@ -21,10 +21,12 @@ never heard of the tag still sees a well-formed array of standard numbers.
 
 ## Status
 
-**0.3.0 — it does what it set out to do.** mCBOR is read and written, all ten
-examples of specification Section 5 byte for byte, and a whole document travels
-through JSON with every measurement intact. What remains is hardening and the
-conformance matrix; see [WORKPLAN.md](WORKPLAN.md).
+**0.9.0 — the API freeze.** mCBOR is read and written, all ten examples of
+specification Section 5 byte for byte, a whole document travels through JSON
+with every measurement intact, and [docs/conformance.md](docs/conformance.md)
+maps every normative clause to the code that enforces it and the test that
+proves it. What remains is documentation and the release; see
+[WORKPLAN.md](WORKPLAN.md).
 
 | Work package | State |
 |---|---|
@@ -35,8 +37,8 @@ conformance matrix; see [WORKPLAN.md](WORKPLAN.md).
 | WP4 — Tag 44252 codec | done — **v0.1.0** |
 | WP5 — Text format: grammar, renderer, parser | done — **v0.2.0** |
 | WP6 — Document-level CBOR/JSON conversion | done — **v0.3.0** |
-| WP7 — Hardening and conformance | next |
-| WP8 — Documentation and release | planned |
+| WP7 — Hardening and conformance | done — **v0.9.0** |
+| WP8 — Documentation and release | next |
 
 Version 1.0.0 is gated on the IANA registration of the tag. Until then the
 public API may change in minor releases.
@@ -272,6 +274,18 @@ npm run verify
 `verify` runs the registry check, the type checker, the linter, the tests and
 the build — the same sequence as CI.
 
+The fuzz suites are sized by an environment variable, because a pull request
+and a nightly run can afford different things:
+
+```bash
+MCBOR_FUZZ_RUNS=200000 npm run test:fuzz
+```
+
+Two hundred thousand cases per property is what the nightly workflow runs.
+Everything that survived it is in [docs/conformance.md](docs/conformance.md),
+together with what the fuzzing found and where every requirement of the
+specification went.
+
 The specification lives in
 [its own repository](https://github.com/OpenChargingTechnology/Whitepapers/tree/master/MetrologicalCBOR)
 and is not committed here. Fetch it to run the conformance comparison; without
@@ -283,7 +297,9 @@ npm run fetch:spec
 
 CI does this before every test run.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the rules that are not negotiable,
+See [docs/conformance.md](docs/conformance.md) for the clause-by-clause matrix,
+[docs/text-format.md](docs/text-format.md) for the text grammar,
+[CONTRIBUTING.md](CONTRIBUTING.md) for the rules that are not negotiable,
 and [SECURITY.md](SECURITY.md) for what counts as a vulnerability in a library
 that parses signed, legally relevant measurement data.
 

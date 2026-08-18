@@ -74,9 +74,13 @@ export function compareBytes(left: Uint8Array, right: Uint8Array): number {
 
     const shared = Math.min(left.length, right.length);
 
+    // Asserted rather than defaulted. The loop bound is the shorter length, so
+    // both bytes are there; a `?? 0` would say instead that a byte which is not
+    // there compares as zero, which is a different and wrong claim, and one no
+    // test could ever reach to contradict.
     for (let index = 0; index < shared; index++) {
-        const a = left[index] ?? 0;
-        const b = right[index] ?? 0;
+        const a = left[index]!;
+        const b = right[index]!;
         if (a !== b)
             return a < b ? -1 : 1;
     }

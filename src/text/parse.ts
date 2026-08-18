@@ -33,6 +33,7 @@
  */
 
 import { ValueError }              from '../errors.js';
+import { invariant }               from '../invariant.js';
 import { UnitRegistry }            from '../registry/index.js';
 import type { UnitDefinition }     from '../registry/types.js';
 import { parseDecimal }            from '../model/decimal.js';
@@ -50,8 +51,15 @@ import { fromSuperscript, normalise, SUPERSCRIPT_CHARACTERS } from './symbols.js
 /** A number: an integer, a decimal fraction, or either in scientific form. */
 const NUMBER = /^[+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/;
 
-/** The factor of ten that carries a prefix the unit symbol could not. */
-const SCALE = /^\s*[\u00D7x*]\s*10\s*(?:\^\s*([+-]?\d+)|([\u207B\u207A\u2070\u00B9\u00B2\u00B3\u2074-\u2079]+))/;
+/**
+ * The factor of ten that carries a prefix the unit symbol could not.
+ *
+ * Both spellings of the exponent are captured by one group rather than by one
+ * group each. An alternation of two groups leaves exactly one of them absent,
+ * and every reader of the match then has to restate which \u2014 a fact the pattern
+ * already knows and the type system cannot see.
+ */
+const SCALE = /^\s*[\u00D7x*]\s*10\s*(\^\s*[+-]?\d+|[\u207B\u207A\u2070\u00B9\u00B2\u00B3\u2074-\u2079]+)/;
 
 /** The plus-minus sign, and the two ways of typing it. */
 const PLUS_MINUS = /\u00B1|\+\/-|\+-/;
@@ -193,13 +201,13 @@ function readScale(text: string): { prefix: number; rest: string } {
     if (match === null)
         return { prefix: SIPrefix.None, rest: text };
 
-    const caret      = match[1];
-    const superscript = match[2];
+    const written = invariant(match[1], 'the exponent of a factor of ten');
 
-    const digits = caret ?? (superscript === undefined ? undefined : fromSuperscript(superscript));
-
-    if (digits === undefined)
-        throw syntax(`${JSON.stringify(text)} has a factor of ten with no exponent.`);
+    // The caret form carries its own marker; anything else the pattern let
+    // through is made of the characters fromSuperscript reads, all of them.
+    const digits = written.startsWith('^')
+                       ? written.slice(1).trim()
+                       : invariant(fromSuperscript(written), 'the digits of a superscript exponent');
 
     return { prefix: Number.parseInt(digits, 10), rest: text.slice(match[0].length) };
 
@@ -267,7 +275,7 @@ function splitExponent(token: string): { symbol: string; exponent: UnitExponent 
 
     if (caret !== null) {
 
-        const numerator   = Number.parseInt(caret[1] ?? '', 10);
+        const numerator   = Number.parseInt(invariant(caret[1], 'the numerator of a caret exponent'), 10);
         const denominator = caret[2] === undefined ? 1 : Number.parseInt(caret[2], 10);
 
         return {
@@ -396,8 +404,8 @@ function readExtensions(extensions: readonly string[]): StatedExtensions {
         if (match === null)
             throw syntax(`${JSON.stringify(extension)} is not a name and a value.`);
 
-        const name  = match[1] ?? '';
-        const given = (match[2] ?? '').trim();
+        const name  = invariant(match[1], 'the name of an extension');
+        const given = invariant(match[2], 'the value of an extension').trim();
 
         switch (name) {
 

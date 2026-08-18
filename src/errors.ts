@@ -122,6 +122,15 @@ export type McborErrorCode =
     /** A unit exponent whose denominator is not positive. Section 3.2. */
     | 'ERR_UNIT_EXPONENT_DENOMINATOR'
 
+    /**
+     * A rational unit exponent that is not in lowest terms.
+     *
+     * Section 3.2 requires the reduced form, and Section 6 requires the
+     * encoding to be a function of the reading alone — which `[20, 2]` and
+     * `10` as two spellings of one exponent would not be.
+     */
+    | 'ERR_UNIT_EXPONENT_NOT_REDUCED'
+
     /** A product of powers with no factors. Section 3.2. */
     | 'ERR_UNIT_PRODUCT_EMPTY'
 

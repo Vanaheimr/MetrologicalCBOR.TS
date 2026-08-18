@@ -57,6 +57,28 @@ jobs:
           path: coverage/
           retention-days: 14
 
+  fuzz:
+    name: Fuzz corpus
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+
+      - name: Run the corpus at full size
+        # Two hundred thousand cases per property, against mutated golden
+        # vectors, random bytes, text from the grammar's own alphabet and
+        # generated JSON documents. A pull request runs two thousand, which is
+        # what it can afford; this is the run nobody is waiting for.
+        env:
+          MCBOR_FUZZ_RUNS: '200000'
+        run: npx vitest run tests/fuzz --reporter=dot
+
   audit:
     name: Dependency audit
     runs-on: ubuntu-latest

@@ -10,6 +10,82 @@ on the IANA registration of tag 44252 — see [WORKPLAN.md](WORKPLAN.md), WP8.
 
 ## [Unreleased]
 
+## [0.9.0] — 2026-08-18
+
+**The API freeze.** Nothing new to do; everything that was here, held against
+input designed to break it. `docs/conformance.md` maps every normative clause
+of the specification to the code that enforces it and the test that proves it,
+and a test keeps that document from drifting away from the code.
+
+Two defects and one silent loss came out of the fuzzing, all three in code that
+passed every test written for it. They are listed under *Fixed* below, and the
+first of them is the one that mattered.
+
+### Added
+
+- Fuzz suites under `tests/fuzz` (WP7): golden vectors damaged one edit at a
+  time, random bytes, text from the grammar's own alphabet, and generated JSON
+  documents. Every input must produce a value or a typed `McborError`; a
+  `RangeError`, a `TypeError` or anything else is re-thrown as the defect it
+  is. `MCBOR_FUZZ_RUNS` sizes the corpus, and the nightly workflow runs two
+  hundred thousand cases per property.
+- Two of those suites measure how often the corpus is *accepted*. Every other
+  property has the form "if it was accepted, then …" and would hold vacuously
+  over a corpus that had stopped reaching the decoder, so a fuzzer gone quiet
+  now fails instead of passing.
+- Resource-bound tests for every field of `DecodeLimits`, each with the input
+  that just exceeds it and the one that just does not, and each timed: nine
+  bytes claiming 2^64−1 items must cost nine bytes to refuse.
+- `docs/conformance.md`, and `tests/conformance.test.ts` to hold it to the
+  code. Adding an error code without saying which clause it enforces now fails
+  the build.
+- `InvariantError`, deliberately not an `McborError`: the hierarchy says the
+  input was wrong, and this says the library is. It replaces the `?? ''`
+  fallbacks behind the text parser's mandatory capture groups — each of those
+  was a silent wrong answer where the reasoning was mistaken, and a branch no
+  test could ever reach.
+- `npm run test:fuzz`, and `docs/` in the published package.
+
+### Fixed
+
+- **A rational unit exponent that is not in lowest terms was accepted by strict
+  mode and silently reduced.** `[20, 2]` decoded and re-encoded as `10`, so a
+  signed document changed its bytes on the way through — which is the one thing
+  a strict decoder exists to prevent. It is now `ERR_UNIT_EXPONENT_NOT_REDUCED`
+  in strict mode, and reduced as before in lenient mode, which is what the
+  specification requires of a decoder. Found by the round-trip property, not by
+  a hand-written case.
+- **A JSON member named `__proto__` was lost, and could replace the prototype
+  of the object it was converted into.** `mcborToJson` assigned member names,
+  and assignment does not mean what it appears to for that one name: the member
+  vanished, and a map under it became the returned object's prototype — an
+  object reporting no keys while answering to the ones the document supplied.
+  Members are now defined rather than assigned, which is what `JSON.parse`
+  does.
+- **A `Date` became `{}` instead of its instant.** `jsonToMcbor` now consults
+  `toJSON`, once per value as the serialisation algorithm does, so a value
+  converts to what `JSON.stringify` would have written. A timestamp is the
+  commonest non-primitive in a measurement record.
+- The error code for a value too large to hold as a number was
+  `ERR_UNIT_EXPONENT_DENOMINATOR` wherever it was raised — including for an SI
+  prefix and for a probability distribution, which sent the reader to the wrong
+  clause. Each caller now states its own code.
+
+### Changed
+
+- `sameNumericValue` is removed. It was a one-line wrapper around
+  `compareDecimal`, unused and untested; at an API freeze, speculative surface
+  is surface that has to be kept.
+
+### Coverage
+
+99.8 % of statements and 99.5 % of branches, and **100 % of both in `src/codec`
+and `src/text`**, which was the acceptance criterion for this work package.
+Three branches in the whole library are unreachable by any input; each is a
+guard whose removal would turn an impossible state into a silent wrong answer,
+and each is named with its reason in `docs/conformance.md` rather than hidden
+behind an ignore comment.
+
 ## [0.3.0] — 2026-08-18
 
 Whole documents between CBOR and JSON, with every metrological value as one

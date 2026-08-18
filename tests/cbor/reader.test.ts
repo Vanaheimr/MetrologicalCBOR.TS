@@ -252,3 +252,45 @@ describe('errors', () => {
     });
 
 });
+
+
+describe('indefinite-length items, which only lenient mode reads', () => {
+
+    it('refuses a map that ends between a key and its value', () => {
+
+        // BF 00 FF - an indefinite map, one key, and then the break. The pair
+        // is the unit of a map, so half of one is not a shorter map, it is a
+        // malformed one.
+        expect(codeOf(() => decodeHex('BF00FF', { strict: false }))).toBe('ERR_CBOR_MALFORMED');
+
+        // The complete pair reads, so the refusal is about the missing value.
+        expect(encodeToHex(decodeHex('BF0001FF', { strict: false }))).toBe('A10001');
+
+    });
+
+    it('bounds a byte string assembled from chunks by its total, not by its chunks', () => {
+
+        // 5F 41AA 41BB FF - two one-byte chunks. Each is within a limit of one
+        // byte and the string they make is not, which is the whole reason the
+        // total is tracked separately.
+        const chunked = '5F41AA41BBFF';
+
+        expect(codeOf(() => decodeHex(chunked, { strict: false, limits: { maxStringBytes: 1 } })))
+            .toBe('ERR_CBOR_LIMIT_EXCEEDED');
+
+        expect(encodeToHex(decodeHex(chunked, { strict: false }))).toBe('42AABB');
+
+    });
+
+    it('bounds a text string assembled from chunks the same way', () => {
+
+        const chunked = '7F61616162FF';
+
+        expect(codeOf(() => decodeHex(chunked, { strict: false, limits: { maxStringBytes: 1 } })))
+            .toBe('ERR_CBOR_LIMIT_EXCEEDED');
+
+        expect(encodeToHex(decodeHex(chunked, { strict: false }))).toBe('626162');
+
+    });
+
+});

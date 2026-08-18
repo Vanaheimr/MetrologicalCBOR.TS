@@ -640,9 +640,12 @@ class ByteReader {
 
 
     #u8(): number {
+        // The bound is checked on the line above, so the byte is there. A
+        // `?? 0` would read a byte past the end as a zero rather than as the
+        // end, which is how a truncated document becomes a valid one.
         if (this.#offset + 1 > this.bytes.length)
             throw this.#unexpectedEnd();
-        return this.bytes[this.#offset++] ?? 0;
+        return this.bytes[this.#offset++]!;
     }
 
 

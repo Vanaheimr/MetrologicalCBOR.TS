@@ -29,6 +29,9 @@ import { describe, expect, it } from 'vitest';
 import { bytesToHex, hexToBytes } from '../../src/cbor/hex.js';
 import { decodeMetrologicalValue, encodeMetrologicalValue } from '../../src/codec/index.js';
 import { formatMetrologicalValue, parseMetrologicalValue } from '../../src/text/index.js';
+import { tryResolveUnitToken }   from '../../src/text/parse.js';
+import { fromSuperscript, toSuperscript } from '../../src/text/symbols.js';
+import { UnitRegistry }          from '../../src/registry/index.js';
 import { Units }                 from '../../src/registry/units.generated.js';
 import { codeOf }                from '../support/errors.js';
 
@@ -402,6 +405,49 @@ describe('what the parser refuses', () => {
 
     it('rejects a prefix that is not an SI prefix', () => {
         expect(codeOf(() => parseMetrologicalValue('5x10^4 A'))).toBe('ERR_PREFIX_INVALID');
+    });
+
+    it('rejects two superscripts run together', () => {
+
+        // This is what `m^3^-1` becomes once both exponents are written in
+        // superscript, and it is the reason the renderer never writes `m³` for
+        // the metre cubed. Read leniently, parseInt would take "3-1" for 3 and
+        // return a reading in cubic metres.
+        expect(codeOf(() => parseMetrologicalValue('1 m³⁻¹'))).toBe('ERR_TEXT_SYNTAX');
+
+    });
+
+});
+
+
+describe('the pieces the format is assembled from', () => {
+
+    // Reachable from the outside only in combinations the parser rejects
+    // earlier, and load-bearing all the same: the renderer calls
+    // tryResolveUnitToken to check its own output before writing it.
+
+    it('reads a superscript back to ordinary digits', () => {
+        expect(fromSuperscript('⁻¹²')).toBe('-12');
+        expect(fromSuperscript('³')).toBe('3');
+    });
+
+    it('reads nothing from an empty superscript', () => {
+        expect(fromSuperscript('')).toBeUndefined();
+    });
+
+    it('reads nothing from a character that is not one', () => {
+        expect(fromSuperscript('x')).toBeUndefined();
+        expect(fromSuperscript('²x')).toBeUndefined();
+    });
+
+    it('writes an integer as a superscript, sign and all', () => {
+        expect(toSuperscript(-12)).toBe('⁻¹²');
+        expect(toSuperscript(0)).toBe('⁰');
+        expect(toSuperscript(1234567890)).toBe('¹²³⁴⁵⁶⁷⁸⁹⁰');
+    });
+
+    it('resolves nothing from an empty token', () => {
+        expect(tryResolveUnitToken('', UnitRegistry.standard, true)).toBeUndefined();
     });
 
 });

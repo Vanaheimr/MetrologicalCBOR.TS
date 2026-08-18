@@ -30,6 +30,7 @@ import { decodeHex }              from '../../src/cbor/reader.js';
 import { jsonToMcbor, mcborToJson } from '../../src/json/index.js';
 import { fromBase64Url, toBase64Url, toJsonPointer } from '../../src/json/types.js';
 import type { JsonPath }          from '../../src/json/types.js';
+import { UnitRegistry }            from '../../src/registry/index.js';
 import { METER_READING_HEX }      from '../vectors/signed-example.js';
 import { codeOf }                 from '../support/errors.js';
 
@@ -382,6 +383,160 @@ describe('JSON Pointers', () => {
         [['a~b'],               '/a~0b'],
     ])('writes %o as %s', (path, expected) => {
         expect(toJsonPointer(path)).toBe(expected);
+    });
+
+});
+
+
+describe('member names that mean something else in JavaScript', () => {
+
+    // Found by the fuzz suite, and both are silent losses rather than errors,
+    // which is the failure mode this library is built to avoid.
+
+    it('carries a member named __proto__ like any other', () => {
+
+        // Assigning `out.__proto__` sets the prototype instead of adding a
+        // member, so this key used to vanish on the way to JSON. `JSON.parse`
+        // defines the property; so does this.
+        const document = { ['__proto__']: false, meter: '1ISA0000000042' };
+        const back     = mcborToJson(jsonToMcbor(document)) as Record<string, unknown>;
+
+        // In the deterministic key order the encoder wrote them in: the
+        // shorter text sorts first, because its length byte does.
+        expect(Object.keys(back)).toStrictEqual(['meter', '__proto__']);
+        expect(Object.hasOwn(back, '__proto__')).toBe(true);
+        expect(back['meter']).toBe('1ISA0000000042');
+
+    });
+
+    it('does not let a document choose the prototype of what it becomes', () => {
+
+        // The same assignment with an object for a value did worse than lose
+        // the member: it replaced the prototype of the returned object, which
+        // then reported no keys at all while answering to the ones the
+        // document had supplied.
+        const back = mcborToJson(jsonToMcbor({ ['__proto__']: { polluted: 'yes' } })) as Record<string, unknown>;
+
+        expect(Object.getPrototypeOf(back)).toBe(Object.prototype);
+        expect(Object.keys(back)).toStrictEqual(['__proto__']);
+        expect((back as { polluted?: unknown }).polluted).toBeUndefined();
+        expect(({} as { polluted?: unknown }).polluted).toBeUndefined();
+
+    });
+
+    it('carries a member named constructor like any other', () => {
+
+        const back = mcborToJson(jsonToMcbor({ constructor: 'a string' })) as { constructor: unknown };
+
+        expect(back.constructor).toBe('a string');
+        expect(JSON.stringify(back)).toBe('{"constructor":"a string"}');
+
+    });
+
+});
+
+
+describe('a value that states its own JSON form', () => {
+
+    it('becomes the form it states, as JSON.stringify would write it', () => {
+
+        // A Date has no enumerable own fields, so converting it as an ordinary
+        // object wrote `{}` and lost the instant. A timestamp is the commonest
+        // non-primitive in a measurement record.
+        const at = new Date(Date.UTC(2026, 7, 15, 8, 14));
+
+        expect(mcborToJson(jsonToMcbor({ time: at } as never)))
+            .toStrictEqual({ time: '2026-08-15T08:14:00.000Z' });
+
+        expect(JSON.parse(JSON.stringify({ time: at })))
+            .toStrictEqual(mcborToJson(jsonToMcbor({ time: at } as never)));
+
+    });
+
+    it('leaves a timestamp a timestamp rather than reading it as a quantity', () => {
+
+        // Under 'auto' every string that starts like a number is tried against
+        // the grammar. An ISO timestamp does, and the grammar rejects it.
+        const bytes = jsonToMcbor({ time: new Date(Date.UTC(2026, 7, 15, 8, 14)) } as never);
+
+        expect(decodeHex(bytesToHex(bytes)).type).toBe('map');
+        expect(mcborToJson(bytes)).toStrictEqual({ time: '2026-08-15T08:14:00.000Z' });
+
+    });
+
+});
+
+
+describe('options that reach past the standard registry', () => {
+
+    it('resolves a private-use unit in both directions', () => {
+
+        const registry = UnitRegistry.standard.withPrivateUnits({
+            id:     40000,
+            symbol: 'flurbo',
+            name:   'flurbo',
+        });
+
+        // 44252([5, 40000]) - a reading in a unit the standard registry has
+        // never heard of, which is the point of the private-use range.
+        const bytes = hexToBytes('D9ACDC8205199C40');
+
+        expect(codeOf(() => mcborToJson(bytes))).toBe('ERR_UNIT_UNKNOWN');
+        expect(mcborToJson(bytes, { registry })).toBe('5 flurbo');
+
+        // On the way in, without the registry, "5 flurbo" is a string that
+        // does not parse as a reading — so under 'auto' it stays the string it
+        // was, which is the documented behaviour and not a failure.
+        expect(bytesToHex(jsonToMcbor('5 flurbo'))).toBe('683520666C7572626F');
+        expect(bytesToHex(jsonToMcbor('5 flurbo', { registry }))).toBe('D9ACDC8205199C40');
+
+    });
+
+});
+
+
+describe('map keys that are not text', () => {
+
+    it('refuses them by default, because JSON has no name for them', () => {
+
+        // {1: 2} - well-formed CBOR, and a JSON object has nowhere to put it.
+        expect(codeOf(() => mcborToJson(hexToBytes('A10102')))).toBe('ERR_JSON_KEY');
+
+    });
+
+    it('writes them in diagnostic notation where the caller asks for it', () => {
+
+        // Which at least says what the key was, rather than pretending it was
+        // text all along.
+        expect(mcborToJson(hexToBytes('A10102'),   { mapKeys: 'stringify' })).toStrictEqual({ '1': 2 });
+        expect(mcborToJson(hexToBytes('A120 02'.replace(/\s/g, '')), { mapKeys: 'stringify' })).toStrictEqual({ '-1': 2 });
+        expect(mcborToJson(hexToBytes('A1F402'), { mapKeys: 'stringify' })).toStrictEqual({ 'false': 2 });
+        expect(mcborToJson(hexToBytes('A1F501'), { mapKeys: 'stringify' })).toStrictEqual({ 'true':  1 });
+        expect(mcborToJson(hexToBytes('A1F601'), { mapKeys: 'stringify' })).toStrictEqual({ 'null':  1 });
+        expect(mcborToJson(hexToBytes('A142AABB02'), { mapKeys: 'stringify' })).toStrictEqual({ "h'aabb'": 2 });
+
+    });
+
+    it('refuses a container for a key even then, because there is no name to write', () => {
+
+        // {[]: 1} and {(4)5: 1}. Stringifying these would be inventing a name
+        // rather than reporting one.
+        expect(codeOf(() => mcborToJson(hexToBytes('A18001'), { mapKeys: 'stringify' }))).toBe('ERR_JSON_KEY');
+        expect(codeOf(() => mcborToJson(hexToBytes('A1C4820005 01'.replace(/\s/g, '')), { mapKeys: 'stringify' }))).toBe('ERR_JSON_KEY');
+
+    });
+
+});
+
+
+describe('an epoch time with a fraction of a second', () => {
+
+    it('passes through as the number it wraps', () => {
+
+        // Tag 1 permits a float, which is how sub-second resolution is
+        // written. A date is a date in JSON however CBOR spelled it.
+        expect(mcborToJson(hexToBytes('C1FB41D9E27D62200000'))).toBe(1737094536.5);
+
     });
 
 });

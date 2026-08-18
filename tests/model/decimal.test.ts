@@ -358,3 +358,28 @@ describe('limits', () => {
     });
 
 });
+
+
+describe('division by a negative divisor', () => {
+
+    it('carries the sign the way arithmetic does', () => {
+
+        // The sign is decided before the magnitudes are divided, so that the
+        // rounding mode applies to the magnitude rather than to a value whose
+        // sign it would otherwise have to reason about.
+        expect(formatDecimal(divideDecimal(integer(10), integer(-4), { scale: 2, rounding: 'half-even' }))).toBe('-2.50');
+        expect(formatDecimal(divideDecimal(integer(-10), integer(-4), { scale: 2, rounding: 'half-even' }))).toBe('2.50');
+        expect(formatDecimal(divideDecimal(integer(-10), integer(4), { scale: 2, rounding: 'half-even' }))).toBe('-2.50');
+
+    });
+
+    it('rounds the magnitude, not the signed value', () => {
+
+        // -2.5 to zero decimals: half-even on the magnitude gives -2, which is
+        // what every decimal arithmetic in metrology does.
+        expect(formatDecimal(divideDecimal(integer(5), integer(-2), { scale: 0, rounding: 'half-even' }))).toBe('-2');
+        expect(formatDecimal(divideDecimal(integer(-5), integer(2), { scale: 0, rounding: 'half-even' }))).toBe('-2');
+
+    });
+
+});

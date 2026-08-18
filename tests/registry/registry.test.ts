@@ -28,6 +28,7 @@ import { describe, expect, it } from 'vitest';
 
 import { UnitError }        from '../../src/errors.js';
 import { UnitRegistry }     from '../../src/registry/index.js';
+import { codeOf }           from '../support/errors.js';
 import {
     STANDARD_UNITS,
     UNIT_ID_MAX,
@@ -331,6 +332,57 @@ describe('private use', () => {
         catch (error) {
             expect((error as UnitError).code).toBe('ERR_REGISTRY_CONFLICT');
         }
+
+    });
+
+});
+
+
+describe('registering several private units at once', () => {
+
+    it('refuses a symbol that another unit in the same call already took', () => {
+
+        // The conflict is with a unit that is not in the registry yet, which
+        // is why the check has to look at what this call is adding as well as
+        // at what is already there.
+        expect(codeOf(() => UnitRegistry.standard.withPrivateUnits(
+            { id: 40000, symbol: 'flurbo', name: 'flurbo' },
+            { id: 40001, symbol: 'flurbo', name: 'another flurbo' },
+        ))).toBe('ERR_REGISTRY_CONFLICT');
+
+    });
+
+    it('refuses a symbol that another unit in the same call took as an alias', () => {
+
+        expect(codeOf(() => UnitRegistry.standard.withPrivateUnits(
+            { id: 40000, symbol: 'flurbo', name: 'flurbo', aliases: ['flb'] },
+            { id: 40001, symbol: 'flb',    name: 'another flurbo' },
+        ))).toBe('ERR_REGISTRY_CONFLICT');
+
+    });
+
+    it('refuses an identification that another unit in the same call already took', () => {
+
+        expect(codeOf(() => UnitRegistry.standard.withPrivateUnits(
+            { id: 40000, symbol: 'flurbo', name: 'flurbo' },
+            { id: 40000, symbol: 'blicket', name: 'blicket' },
+        ))).toBe('ERR_REGISTRY_CONFLICT');
+
+    });
+
+    it('adds them all where they do not collide', () => {
+
+        const extended = UnitRegistry.standard.withPrivateUnits(
+            { id: 40000, symbol: 'flurbo',  name: 'flurbo', aliases: ['flb'] },
+            { id: 40001, symbol: 'blicket', name: 'blicket' },
+        );
+
+        expect(extended.byId(40000).symbol).toBe('flurbo');
+        expect(extended.bySymbol('flb').id).toBe(40000);
+        expect(extended.byId(40001).symbol).toBe('blicket');
+
+        // And the registry it came from is untouched.
+        expect(UnitRegistry.standard.tryById(40000)).toBeUndefined();
 
     });
 

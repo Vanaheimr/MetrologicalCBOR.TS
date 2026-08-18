@@ -30,6 +30,7 @@
  */
 
 import { ValueError }                        from '../errors.js';
+import type { McborErrorCode }               from '../errors.js';
 import { METROLOGICAL_VALUE_TAG }            from '../tag.js';
 import { UnitRegistry }                      from '../registry/index.js';
 import { decode as decodeCbor }              from '../cbor/reader.js';
@@ -295,7 +296,7 @@ function readProduct(items: readonly CborValue[], registry: UnitRegistry, strict
                                  { clause: '3.2' });
 
         return factor(readNamedUnit(each.items[0]!, registry),
-                      readExponent(each.items[1]!));
+                      readExponent(each.items[1]!, strict));
 
     });
 
@@ -326,11 +327,18 @@ function readProduct(items: readonly CborValue[], registry: UnitRegistry, strict
  * A rational whose denominator reduces to one becomes the integer form, so
  * `[2, 1]` and `2` are the same exponent rather than two spellings of it — as
  * are `[-2, 4]` and `[-1, 2]`.
+ *
+ * Which is precisely why strict mode will not read the unreduced spelling.
+ * Section 3.2 requires lowest terms and Section 6 requires the encoding to be a
+ * function of the reading alone, so `[20, 2]` is not something a conforming
+ * encoder produces. Reading it and silently writing `10` back would give one
+ * reading two encodings, and a signature is over bytes: a verifier that
+ * re-encoded what it read would find the document no longer matched.
  */
-function readExponent(item: CborValue): UnitExponent {
+function readExponent(item: CborValue, strict: boolean): UnitExponent {
 
     if (item.type === 'int')
-        return unitExponent(toSmallInteger(item.value, 'A unit exponent'));
+        return unitExponent(toSmallInteger(item.value, 'A unit exponent', 'ERR_UNIT_EXPONENT_DENOMINATOR', '3.2'));
 
     if (item.type !== 'array' || item.items.length !== 2)
         throw new ValueError('ERR_VALUE_TYPE',
@@ -344,18 +352,38 @@ function readExponent(item: CborValue): UnitExponent {
                              'A rational unit exponent has a part that is not an integer.',
                              { clause: '3.2' });
 
-    return unitExponent(toSmallInteger(numerator.value,   'A unit exponent numerator'),
-                        toSmallInteger(denominator.value, 'A unit exponent denominator'));
+    const written  = [toSmallInteger(numerator.value,   'A unit exponent numerator',   'ERR_UNIT_EXPONENT_DENOMINATOR', '3.2'),
+                      toSmallInteger(denominator.value, 'A unit exponent denominator', 'ERR_UNIT_EXPONENT_DENOMINATOR', '3.2')] as const;
+
+    const exponent = unitExponent(written[0], written[1]);
+
+    if (strict && (exponent.kind === 'integer' ||
+                   exponent.numerator   !== written[0] ||
+                   exponent.denominator !== written[1]))
+        throw new ValueError('ERR_UNIT_EXPONENT_NOT_REDUCED',
+                             `The unit exponent ${String(written[0])}/${String(written[1])} is not in lowest terms; ` +
+                             `${exponent.kind === 'integer' ? String(exponent.value) : `${String(exponent.numerator)}/${String(exponent.denominator)}`} is the form an encoder writes.`,
+                             { clause: '3.2' });
+
+    return exponent;
 
 }
 
 
-function toSmallInteger(value: bigint, what: string): number {
+/**
+ * A bigint small enough to reason about as a number.
+ *
+ * The code is the caller's, because the four things read through here — a unit
+ * exponent, its numerator, its denominator, an SI prefix, a distribution — fail
+ * for four different reasons, and a prefix of 2^60 reported as a fault in the
+ * denominator of a unit exponent would send the reader to the wrong clause.
+ */
+function toSmallInteger(value: bigint, what: string, code: McborErrorCode, clause: string): number {
 
     if (value > BigInt(Number.MAX_SAFE_INTEGER) || value < BigInt(Number.MIN_SAFE_INTEGER))
-        throw new ValueError('ERR_UNIT_EXPONENT_DENOMINATOR',
-                             `${what} of ${String(value)} is beyond what an exponent may be.`,
-                             { clause: '3.2' });
+        throw new ValueError(code,
+                             `${what} of ${String(value)} is beyond what this implementation reconstructs.`,
+                             { clause });
 
     return bounded(value);
 
@@ -373,7 +401,7 @@ function readPrefix(item: CborValue): number {
                              `The SI prefix is ${describe(item)}; it must be an integer.`,
                              { clause: '3.3' });
 
-    const exponent = toSmallInteger(item.value, 'An SI prefix');
+    const exponent = toSmallInteger(item.value, 'An SI prefix', 'ERR_PREFIX_INVALID', '3.3');
 
     assertSIPrefix(exponent);
 
@@ -423,7 +451,7 @@ function readUncertainty(item: CborValue, strict: boolean): Uncertainty {
                     throw new ValueError('ERR_UNCERTAINTY_DISTRIBUTION',
                                          `The probability distribution is ${describe(value)}; it must be an identification.`,
                                          { clause: '3.4' });
-                distribution = distributionById(toSmallInteger(value.value, 'A probability distribution'));
+                distribution = distributionById(toSmallInteger(value.value, 'A probability distribution', 'ERR_UNCERTAINTY_DISTRIBUTION', '3.4'));
                 break;
 
             case KEY_DEGREES_OF_FREEDOM:

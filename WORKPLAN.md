@@ -252,7 +252,7 @@ Estimates are focused person-days for one senior TypeScript developer, including
 
 **Design decisions taken here**
 
-- **A5 and A6, as the maintainer decided.** A single named unit written as a one-element product is rejected in strict mode and read as the named unit in lenient mode; a rational exponent is reduced on decoding, so `[2, 1]` is the integer 2 and `[-2, 4]` is `[-1, 2]` in both modes.
+- **A5 and A6, as the maintainer decided.** A single named unit written as a one-element product is rejected in strict mode and read as the named unit in lenient mode; a rational exponent is reduced on decoding, so `[2, 1]` is the integer 2 and `[-2, 4]` is `[-1, 2]`. *Revised in WP7:* reducing in **both** modes was wrong. Strict mode now rejects the unreduced spelling, for the same §6 reason that A5 is rejected — the fuzz suite found that accepting it broke the byte identity a signature rests on.
 - **A prefix of 0 written where nothing follows it is rejected in strict mode** (`ERR_PREFIX_REDUNDANT`). The specification does not forbid it in words, but §6 requires the encoding to be a function of the reading alone, and `[v, u]` and `[v, u, 0]` would be two encodings of one reading. The symbolic unit is treated differently — §3.2 blesses it explicitly ("decoders MUST accept both"), so strict mode accepts it and `units: 'preserve'` reproduces it.
 - **The reading itself is never normalised.** "Encoders SHOULD write integral readings as plain integers" is advice to an instrument writing down what it measured, not licence to rewrite a reading that arrived as `4([0, 5])`. The decimal scale is the datum.
 - **An unknown key in an uncertainty map is rejected**, not ignored. Passing on an uncertainty this library only partly understands would be claiming to understand all of it. The cost is that a future specification version needs a new library version, which for legal metrology is the right trade.
@@ -306,12 +306,34 @@ The first of these appeared only after 100 000 cases. In response the suite gain
 
 - The default test timeout of five seconds is load-dependent, and the text round-trip property sits right on it. **This retroactively explains the unexplained failure recorded under WP5**: a timeout reports no counterexample, which is exactly the output seen there, and is why two million further cases could not reproduce it. The suite now allows the property tests the seconds they honestly take.
 
-### WP7 — Hardening and conformance (3–5 d)
+### WP7 — Hardening and conformance (3–5 d) — **done 2026-08-18, released as v0.9.0**
 
 - Property-based testing (fast-check) across all three representations; structured fuzzing of the decoder (mutated golden vectors, random byte soup) — decoder must throw typed errors, never crash, hang, or return garbage.
 - Resource-bound tests (giant exponents, megabyte bignums, deep nesting) against the limits config.
 - [docs/conformance.md](docs/conformance.md): every normative clause → implementation site → test id; gaps drive follow-up work.
-- **Acceptance:** conformance matrix complete with zero open MUSTs; fuzz corpus runs in nightly CI; 100 % branch coverage on `codec/` and `text/` paths.
+- **Acceptance:** met. The matrix is written and has no open MUSTs; the nightly workflow runs the corpus at 200 000 cases per property; `src/codec/` and `src/text/` are at **100 % of statements and branches**, and the library at 99.8 % / 99.5 %. 1130 tests.
+
+**How the fuzzing was made to bite**
+
+Random bytes are a weak fuzzer for a self-describing format: almost every draw dies on the first byte, and the code that has already decided it is looking at a decimal fraction is never reached. The corpus therefore starts from the ten §5 encodings and the worked example and damages them one edit at a time — a flipped bit, a rewritten byte, a truncation, a splice.
+
+Unweighted, that was still too shallow: five of the seven operators change the length, and a length that changed is caught by the outermost check there is, so seven refusals in ten were "ended early" or "did not end where the item did". Weighting the two length-preserving operators five to one raised the share of mutated readings the codec *accepts* from 2.9 % to 4.4 %, and of documents the reader accepts from 8.8 % to 18 % — and, more to the point, took the strict decoder through 26 distinct error codes instead of 20.
+
+Every property in those suites has the form "if it was accepted, then …", which holds vacuously over a corpus that stops being accepted. Two tests therefore **measure the acceptance rate** and fail below a floor. A fuzzer that has quietly stopped reaching the code it is aimed at is worse than none, because the suite goes on reporting green.
+
+**Findings — three defects, all in code that passed every test written for it**
+
+- **Strict mode accepted a rational unit exponent that is not in lowest terms, and silently reduced it.** `[20, 2]` decoded and re-encoded as `10`, so a signed document changed its bytes on the way through — precisely what strict mode exists to prevent. Found by the round-trip property, which is the only thing that could have found it: no hand-written vector would have thought to write `[20, 2]`, because no encoder writes it. The specification's MUST is that decoders *reduce*, which lenient mode does; refusing the spelling is this implementation's choice, for the §6 reason that already governs A5 and the redundant prefix. New code `ERR_UNIT_EXPONENT_NOT_REDUCED`.
+- **A JSON member named `__proto__` was lost, and could replace the prototype of the object it was converted into.** `mcborToJson` assigned member names; assignment does not mean what it appears to for that one name. A map under it became the returned object's prototype — an object reporting no keys at all while answering to the ones the document supplied. Members are now *defined* rather than assigned, which is what `JSON.parse` does. This one is a security property, not a tidiness one: the document chose the prototype.
+- **A `Date` became `{}` rather than its instant**, because its enumerable own fields are none. `jsonToMcbor` now consults `toJSON`, once per value as the serialisation algorithm does, so a value converts to what `JSON.stringify` would have written. A timestamp is the commonest non-primitive in a measurement record.
+
+**Decisions taken here**
+
+- **The unreachable branch is either removed or named, never ignored.** Four `?? ''` fallbacks stood behind mandatory capture groups in the text parser: a silent wrong answer if the reasoning were mistaken, and a branch no test could reach. They are now one `invariant` call each — the guarantee stated once, checked once at run time, covered once by a test. Three branches genuinely cannot be reached and are guards whose removal would turn an impossible state into a silent corruption; those are listed with file, line and reason in the conformance matrix. An ignore comment would have bought the same number and said nothing.
+- **`InvariantError` is deliberately not an `McborError`.** Every code in that hierarchy says the *input* was wrong. A caller distinguishing "the measurement data is bad" from "the library is broken" needs those to be different things, and the fuzz suites assert exactly that: every input yields an `McborError`, so an `InvariantError` escaping is a bug report rather than a rejected document.
+- **`toSmallInteger` takes the caller's error code.** It reported `ERR_UNIT_EXPONENT_DENOMINATOR` for everything, including an SI prefix and a probability distribution, which sent the reader to the wrong clause of the specification.
+- **`sameNumericValue` is removed.** An unused, untested one-line wrapper is surface that an API freeze commits to keeping.
+- **The conformance matrix is tested.** `tests/conformance.test.ts` checks that every path it points at exists, that every line anchor is still inside its file, and that every error code the library has appears in it — so a new normative check cannot be added without saying which clause it enforces. Prose does not fail a build; this does.
 
 ### WP8 — Documentation, examples, release (2–3 d)
 
@@ -381,7 +403,7 @@ Versioning: SemVer; 0.x during WP4–WP7 (published early — real feedback beat
 | ~~M2~~ | ~~WP3 + WP4~~ → **v0.1.0** | **done 2026-08-18** — all §5 vectors byte-exact in both directions | 15 d |
 | ~~M3~~ | ~~WP5~~ → **v0.2.0** | **done 2026-08-18** — grammar frozen, lossless text round-trip | 21 d |
 | ~~M4~~ | ~~WP6~~ → **v0.3.0** | **done 2026-08-18** — document JSON round-trip | 24 d |
-| M5 | WP7 → **v0.9.0** | conformance matrix complete, fuzzing in nightly | 28 d |
+| ~~M5~~ | ~~WP7~~ → **v0.9.0** | **done 2026-08-18** — conformance matrix complete, fuzzing in nightly, 100 % on `codec/` and `text/` | 28 d |
 | M6 | WP8 → **v1.0.0** | published with provenance; IANA recorded | 31 d |
 
 Total ≈ **24–36 focused person-days** (the table shows mid-range). Calendar time depends on availability; the critical path is WP2 → WP3 → WP5.
@@ -398,7 +420,8 @@ Total ≈ **24–36 focused person-days** (the table shows mid-range). Calendar 
 | Unicode homoglyphs (µ/μ, Ω/Ω) and superscripts | parse failures or duplicated spellings | NFC + explicit homoglyph normalization in the grammar, fixture-tested |
 | Float leakage (JS ecosystem habit) | resolution loss — spec violation | **mitigated:** `bigint` end to end; the ESLint ban on `Number`, `parseFloat` and `Math` in `model/`/`codec/`/`text/` is in place and verified to fire; property tests compare exact strings |
 | JSON consumers mangling big numbers | data corruption outside our API | numbers > 2⁵³−1 become strings by default; documented |
-| Own CBOR core bugs | correctness | **largely mitigated:** RFC 8949 Appendix A vectors, 40 000 property-based cases including random byte soup, the worked example end to end; 95 % branch coverage. The 100 % target for `codec/` and `text/` stays with WP7 |
+| Own CBOR core bugs | correctness | **closed:** RFC 8949 Appendix A vectors, the worked example end to end, every one- and two-byte input enumerated rather than sampled, and 200 000 mutated-and-random cases per property in the nightly run; 100 % branch coverage on `codec/` and `text/`, 99.5 % overall with three named unreachable guards |
+| A defect that only a signature would reveal | a signed document that no longer verifies | **mitigated:** the strict decoder's accepted set and its encodable set are asserted to be the same set, over mutated golden vectors. This is what caught the unreduced rational exponent in WP7 |
 
 ---
 
@@ -407,7 +430,7 @@ Total ≈ **24–36 focused person-days** (the table shows mid-range). Calendar 
 1. **NPM package name/scope** — **decided 2026-08-18: `@vanaheimr/metrological-cbor`** (the scope is available; it matches the repository's own namespace and the Styx reference implementation, rather than the application scope ChargyCore uses).
 2. **JSON profile default** — **decided 2026-08-18: only metrological values become strings**, everything else takes its ordinary JSON form.
 3. **JSON → mCBOR detection default** — **taken by default, not decided:** `readings: 'auto'` try-parses every candidate string, which is what makes the round trip work without configuration, at the documented cost that a prose field holding `"1 h"` becomes one hour. A predicate is available per path. Cheap to flip to `'none'` if that trade is wrong for the intended consumers.
-4. **Decoder strictness default** — `strict` rejects discouraged-but-well-formed spellings (`4([0,5])`, `[v, u, 0]` without uncertainty, one-element unit arrays). Plan default: strict on, lenient opt-in. This also needs two decoder-side clarifications in the spec (Appendix A, A5/A6).
+4. **Decoder strictness default** — **decided 2026-08-18: strict on, lenient opt-in.** Strict rejects five discouraged-but-well-formed spellings (`4([0,5])`, `[v, u, 0]` without uncertainty, one-element unit arrays, an uncertainty map stating only a magnitude, and — added in WP7 — a rational exponent not in lowest terms). Each is a second way of writing something the format can already write, which §6 does not permit; lenient mode reads and normalises all five, which is what the specification requires of a decoder. Listed with their reasons in [docs/conformance.md](docs/conformance.md) §9. **Worth feeding back to the specification:** §3.2 tells encoders what to write and decoders what to reduce, but says nothing about what a decoder should *refuse* — the gap that let the unreduced exponent through for three work packages.
 5. **Uncertainty text syntax** — the extension tokens beyond the spec's own `, k=2` (`p=`, `dist=`, `ν=`) are this project's invention; review at WP5 grammar freeze — ideally they feed back into the spec as its recommended display form.
 6. **COSE demo in `examples/`** — worth the dev-dependency, or defer entirely?
 7. **Specification comparison in CI** — **decided 2026-08-18:** `npm run fetch:spec` pulls the document from the public whitepaper repository, so CI enforces the comparison without the specification being committed here.

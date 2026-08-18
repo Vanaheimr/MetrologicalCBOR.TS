@@ -1,6 +1,6 @@
 {
   "name": "@vanaheimr/metrological-cbor",
-  "version": "0.3.0",
+  "version": "0.9.0",
   "description": "Reference implementation of Metrological CBOR (mCBOR), CBOR tag 44252: quantity values with unit of measure, SI prefix and GUM measurement uncertainty.",
   "keywords": [
     "cbor",
@@ -41,6 +41,7 @@
   "types": "./dist/index.d.ts",
   "files": [
     "dist",
+    "docs",
     "README.md",
     "LICENSE",
     "NOTICE",
@@ -68,6 +69,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:fuzz": "vitest run tests/fuzz",
     "verify": "npm run check:registry && npm run typecheck && npm run lint && npm run test && npm run build",
     "prepublishOnly": "npm run verify",
     "extract:example": "tsx scripts/extract-example.ts"

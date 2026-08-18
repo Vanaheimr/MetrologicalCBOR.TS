@@ -30,6 +30,7 @@ import { CborError }              from '../../src/errors.js';
 import { decodeHex, encode, encodeToHex } from '../../src/cbor/index.js';
 import { shortestFloatWidth, toHalfBits, fromHalfBits } from '../../src/cbor/writer.js';
 import { array, bytes, float, int, map, simple, tag, text } from '../../src/cbor/types.js';
+import { codeOf }                 from '../support/errors.js';
 
 
 describe('map keys', () => {
@@ -264,6 +265,87 @@ describe('byte strings and text', () => {
 
         // Four characters, ten bytes.
         expect(encodeToHex(text('aü水\u{10151}'))).toBe('6A' + '61C3BCE6B0B4F0908591');
+
+    });
+
+});
+
+
+describe('what cannot be written', () => {
+
+    it('refuses a recorded half width the value does not fit in', () => {
+
+        // Preserve mode writes the width the document arrived with rather than
+        // the shortest one. A caller who says "half" about a value no half
+        // holds is asking for a different number, and gets an error instead.
+        expect(codeOf(() => encode(float(1e300, 2), { floats: 'preserve' }))).toBe('ERR_CBOR_UNENCODABLE');
+        expect(codeOf(() => encode(float(0.1,   2), { floats: 'preserve' }))).toBe('ERR_CBOR_UNENCODABLE');
+
+        // And writes the ones that do fit, so this is a limit of the width
+        // rather than of preserve mode.
+        expect(encodeToHex(float(1.5,      2), { floats: 'preserve' })).toBe('F93E00');
+        expect(encodeToHex(float(Infinity, 2), { floats: 'preserve' })).toBe('F97C00');
+        expect(encodeToHex(float(Number.NaN, 2), { floats: 'preserve' })).toBe('F97E00');
+
+    });
+
+    it('refuses an argument too large for any CBOR head', () => {
+
+        // A head carries at most a 64-bit argument. A tag number beyond that
+        // is expressible in this model — bigints have no ceiling — and not on
+        // the wire.
+        expect(codeOf(() => encode(tag(1n << 64n, int(0))))).toBe('ERR_CBOR_UNENCODABLE');
+        expect(codeOf(() => encode(tag((1n << 64n) - 1n, int(0))))).toBe('no throw');
+
+    });
+
+});
+
+
+describe('the half-precision conversion itself', () => {
+
+    it('has no pattern for NaN, which the caller chooses', () => {
+
+        // Deterministic encoding picks one of the many NaN patterns
+        // (RFC 8949, Section 4.2.2), so this reports that it has no answer
+        // rather than inventing one.
+        expect(toHalfBits(Number.NaN)).toBeUndefined();
+
+    });
+
+    it('has no pattern for a value a float32 cannot hold exactly', () => {
+
+        // The half is checked through the float32, so anything the wider
+        // format loses is lost here too.
+        expect(toHalfBits(0.1)).toBeUndefined();
+        expect(toHalfBits(1e300)).toBeUndefined();
+        expect(toHalfBits(5.960464477539063e-8 / 2)).toBeUndefined();
+
+    });
+
+    it('has one for the infinities and the zeroes', () => {
+
+        expect(toHalfBits(Infinity)).toBe(0x7C00);
+        expect(toHalfBits(-Infinity)).toBe(0xFC00);
+        expect(toHalfBits(0)).toBe(0x0000);
+        expect(toHalfBits(-0)).toBe(0x8000);
+
+    });
+
+    it('round-trips every half-precision pattern there is', () => {
+
+        // 65 536 patterns, so this is exhaustive rather than sampled. NaN is
+        // excluded because it has no single pattern to come back to.
+        for (let bits = 0; bits <= 0xFFFF; bits += 1) {
+
+            const value = fromHalfBits(bits);
+
+            if (Number.isNaN(value))
+                continue;
+
+            expect(toHalfBits(value)).toBe(bits);
+
+        }
 
     });
 

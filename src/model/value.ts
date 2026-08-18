@@ -32,7 +32,7 @@
 import { ValueError }             from '../errors.js';
 import { assertSIPrefix, SIPrefix } from './prefix.js';
 import {
-    compareDecimal, equalsExact, exponentOf, formatDecimal, mantissaOf,
+    equalsExact, exponentOf, formatDecimal, mantissaOf,
 } from './decimal.js';
 import type { DecimalNumber }     from './decimal.js';
 import { isAffine, sameUnitQuantity, sameUnitRepresentation } from './unit.js';
@@ -282,14 +282,4 @@ export function sameQuantity(left: MetrologicalValue, right: MetrologicalValue):
     return sameUnitQuantity(left.unit, right.unit) &&
            !(left.affine && left.prefix !== right.prefix) &&
            left.compareQuantity(right) === 0;
-}
-
-
-/**
- * Whether two readings denote the same quantity, comparing only the numbers.
- *
- * Used where the units are already known to match.
- */
-export function sameNumericValue(left: DecimalNumber, right: DecimalNumber): boolean {
-    return compareDecimal(left, right) === 0;
 }
