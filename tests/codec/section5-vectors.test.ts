@@ -321,42 +321,67 @@ const ROOT      = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const SPEC_PATH = join(ROOT, 'spec', 'README.md');
 const PRESENT   = existsSync(SPEC_PATH);
 
-describe.skipIf(!PRESENT)('the table of Section 5', () => {
 
-    /** The `| reading | encoding |` rows whose encoding is hexadecimal. */
-    function parseTable(): { reading: string; hex: string }[] {
+/**
+ * The `| reading | encoding |` rows of Section 5 whose encoding is hexadecimal.
+ *
+ * Read here rather than inside the `describe`, and returning nothing where the
+ * specification is absent, because `it.each` needs its cases while the suite is
+ * being *collected* — and a suite is collected even when it is about to be
+ * skipped. Reading the file behind `describe.skipIf` therefore did not guard it
+ * at all: the guard suppressed the tests and the read threw first.
+ *
+ * That is what broke the first release. The specification is fetched rather
+ * than committed, CI fetches it before testing and the release workflow does
+ * not, so a suite that was supposed to skip failed instead — and it failed only
+ * where nobody had a working copy of the document lying about, which is
+ * everywhere except a maintainer's machine.
+ */
+function specificationTable(): { reading: string; hex: string }[] {
 
-        const document = readFileSync(SPEC_PATH, 'utf8');
-        const rows: { reading: string; hex: string }[] = [];
+    if (!PRESENT)
+        return [];
 
-        for (const line of document.split(/\r?\n/)) {
+    const document = readFileSync(SPEC_PATH, 'utf8');
+    const rows: { reading: string; hex: string }[] = [];
 
-            const match = /^\|\s*`([^`]+)`[^|]*\|\s*`([0-9A-F][0-9A-F ]*)`\s*\|$/.exec(line);
-            if (match === null)
-                continue;
+    for (const line of document.split(/\r?\n/)) {
 
-            rows.push({ reading: match[1] ?? '', hex: (match[2] ?? '').replace(/\s/g, '') });
+        const match = /^\|\s*`([^`]+)`[^|]*\|\s*`([0-9A-F][0-9A-F ]*)`\s*\|$/.exec(line);
+        if (match === null)
+            continue;
 
-        }
-
-        return rows;
+        rows.push({ reading: match[1] ?? '', hex: (match[2] ?? '').replace(/\s/g, '') });
 
     }
 
+    return rows;
+
+}
+
+
+const TABLE = specificationTable();
+
+
+describe.skipIf(!PRESENT)('the table of Section 5', () => {
+
     it('is parsed, and holds ten encodings', () => {
-        expect(parseTable()).toHaveLength(10);
+        expect(TABLE).toHaveLength(10);
     });
 
     it('holds exactly the encodings this suite tests', () => {
 
-        const fromSpecification = parseTable().map(row => row.hex).sort();
+        const fromSpecification = TABLE.map(row => row.hex).sort();
         const fromTests         = VECTORS.map(vector => vector.hex).sort();
 
         expect(fromTests).toStrictEqual(fromSpecification);
 
     });
 
-    it.each(parseTable())('decodes and re-encodes $hex', ({ hex }) => {
+    // `TABLE` is empty where the specification is absent, and `it.each([])`
+    // registers no cases — which is the same nothing the skip would have
+    // produced, arrived at without reading a file that is not there.
+    it.each(TABLE)('decodes and re-encodes $hex', ({ hex }) => {
 
         const value = decodeMetrologicalValue(hexToBytes(hex));
 

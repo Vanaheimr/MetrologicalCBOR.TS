@@ -63,6 +63,33 @@ jobs:
         # where dist/ is absent.
         run: npm run verify
 
+  bare:
+    name: Verify without the specification
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      # Deliberately no `npm run fetch:spec`. The specification lives in its own
+      # repository and is not committed here, so the suites that compare against
+      # it are written to skip where it is absent — and the README promises a
+      # fresh clone can run `npm run verify`.
+      #
+      # Nothing enforced that promise. The matrix job above fetches the document
+      # first, so it never exercised the path, and the gap surfaced where it
+      # costs the most: the release workflow does not fetch either, and a suite
+      # that was supposed to skip read the file at collection time and threw.
+      # Two releases failed before anyone was looking at the right thing.
+      - name: Verify on a bare clone
+        run: npm run verify
+
   examples:
     name: Examples
     runs-on: ubuntu-latest

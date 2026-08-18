@@ -68,6 +68,14 @@ freeze declared in 0.9.0 holds.
   builds the documentation too.
 - A README link pointed at the `examples/` directory rather than at a file,
   which typedoc refuses to resolve.
+- **`npm run verify` failed on a fresh clone.** The suites that compare against
+  the specification are written to skip where the document is absent, and one of
+  them read it while the suite was being *collected* — which happens even for a
+  suite about to be skipped, so the guard suppressed the tests and the read
+  threw first. It failed everywhere except a machine that already had a working
+  copy lying about, which is how it survived to break two release attempts. A CI
+  job now runs `verify` on a bare clone, deliberately without fetching the
+  specification, so the promise the README makes is one something checks.
 
 ### Known
 
