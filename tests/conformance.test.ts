@@ -187,7 +187,7 @@ describe('the coverage the matrix reports', () => {
         // coverage run; what is checked here is that it is still made in the
         // specific, falsifiable form — a file and a line for each exception —
         // rather than softened into a sentence nobody can check.
-        const section = document.slice(document.indexOf('## 10. Coverage'));
+        const section = document.slice(document.indexOf('## 11. Coverage'));
 
         expect(section).toMatch(/src\/codec\//);
         expect(section).toMatch(/src\/text\//);
