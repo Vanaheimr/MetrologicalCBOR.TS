@@ -30,6 +30,12 @@ jobs:
         # dependencies before it reaches a pull request.
         run: npm install
 
+      - name: Fetch the specification
+        # Deliberately not continue-on-error, unlike CI: this is the run that
+        # guarantees the registry is actually compared against the
+        # specification rather than silently skipped.
+        run: npm run fetch:spec
+
       - run: npm run verify
 
   coverage:

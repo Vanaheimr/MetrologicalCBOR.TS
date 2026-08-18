@@ -16,11 +16,12 @@
   ],
 
   "specification": {
-    "title":   "CBOR Tag 44252: Metrological Values",
+    "title":   "Metrological CBOR (Tag 44252)",
     "version": "1.0",
-    "date":    "2026-08-14",
+    "date":    "2026-08-18",
     "section": "4",
-    "tag":     44252
+    "tag":     44252,
+    "source":  "https://github.com/OpenChargingTechnology/Whitepapers/tree/master/MetrologicalCBOR"
   },
 
   "identifications": {

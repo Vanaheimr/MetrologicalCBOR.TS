@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
- * This file is part of Metrological CBOR <https://github.com/OpenChargingCloud/MetrologicalCBOR.TS>
+ * This file is part of Metrological CBOR <https://github.com/Vanaheimr/MetrologicalCBOR.TS>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,6 +64,7 @@ interface Specification {
     readonly date:     string;
     readonly section:  string;
     readonly tag:      number;
+    readonly source:   string;
 }
 
 interface Identifications {
@@ -149,6 +150,7 @@ function readSource(): RegistryModel {
         date:    asString (spec['date'],    'specification.date'),
         section: asString (spec['section'], 'specification.section'),
         tag:     asInteger(spec['tag'],     'specification.tag'),
+        source:  asString (spec['source'],  'specification.source'),
     };
 
     const ids = asRecord(raw['identifications'], 'identifications');
@@ -299,7 +301,7 @@ function emit(model: RegistryModel): string {
 
     out.push('/*');
     out.push(' * Copyright (c) 2026 GraphDefined GmbH <achim.friedland@graphdefined.com>');
-    out.push(' * This file is part of Metrological CBOR <https://github.com/OpenChargingCloud/MetrologicalCBOR.TS>');
+    out.push(' * This file is part of Metrological CBOR <https://github.com/Vanaheimr/MetrologicalCBOR.TS>');
     out.push(' *');
     out.push(' * Licensed under the Apache License, Version 2.0 (the "License");');
     out.push(' * you may not use this file except in compliance with the License.');
@@ -334,12 +336,16 @@ function emit(model: RegistryModel): string {
 
     out.push('/**');
     out.push(' * The specification revision this registry was transcribed from.');
+    out.push(' *');
+    out.push(' * `npm run fetch:spec` retrieves that document into `spec/`, where the');
+    out.push(' * conformance suite compares it with the registry entry by entry.');
     out.push(' */');
     out.push('export const REGISTRY_SPECIFICATION = Object.freeze({');
     out.push('    title:   ' + tsString(specification.title)   + ',');
     out.push('    version: ' + tsString(specification.version) + ',');
     out.push('    date:    ' + tsString(specification.date)    + ',');
     out.push('    section: ' + tsString(specification.section) + ',');
+    out.push('    source:  ' + tsString(specification.source)  + ',');
     out.push('} as const);');
     out.push('');
     out.push('');

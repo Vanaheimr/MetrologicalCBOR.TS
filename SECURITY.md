@@ -4,7 +4,7 @@
 
 Please report security issues privately to
 **achim.friedland@graphdefined.com**, or through GitHub's
-[private vulnerability reporting](https://github.com/OpenChargingCloud/MetrologicalCBOR.TS/security/advisories/new).
+[private vulnerability reporting](https://github.com/Vanaheimr/MetrologicalCBOR.TS/security/advisories/new).
 
 Do not open a public issue for a vulnerability.
 

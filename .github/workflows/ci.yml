@@ -40,6 +40,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Fetch the specification
+        # The specification lives in its own repository and is not committed
+        # here. With it present the conformance suite compares the unit
+        # registry against the document entry by entry; without it that suite
+        # skips. A network failure must not block a pull request, so this step
+        # may fail — the nightly workflow runs the same fetch without that
+        # licence, so a persistent problem still surfaces within a day.
+        run: npm run fetch:spec
+        continue-on-error: true
+
       - name: Verify the generated unit registry is in sync
         run: npm run check:registry
 

@@ -200,8 +200,9 @@ Estimates are focused person-days for one senior TypeScript developer, including
 - Unit-id errata A1–A4 (Appendix A): **fixed directly in `spec/README.md` on 2026-08-18.**
 - `src/registry/units.json` authored strictly from the §4 *table*: **50 units** (the plan's estimate of 48 was low), aliases, affine flag, SenML symbols, identification ranges. `scripts/generate-registry.ts` validates it and emits `src/registry/units.generated.ts`; `npm run check:registry` fails CI if the two drift.
 - **Acceptance:** met. `tests/registry/specification.test.ts` parses `spec/README.md` and compares it with the registry in **both** directions — table rows, alias list, affine marker, SenML paragraph, percent reference, mass note, and the unit-factor examples of §3.2/3.3 — so neither document nor data file can move without the other. 137 tests pass with the spec present.
-- *Still open:* sync the errata to the published upstream copy of the spec (the document the IANA registration URL will point to), and settle the decoder questions A5/A6 with the maintainer.
-- *Consequence of `spec/` being git-ignored:* the specification is a local working copy, so a fresh checkout has no `spec/`. The conformance suite skips itself there (42 pass, 22 skip, 0 fail) rather than breaking CI. **CI therefore does not currently enforce the specification comparison** — it runs only where a maintainer has the spec checked out. If that guarantee is wanted in CI, the options are a pinned copy of §4 committed as a fixture, or a CI step that checks out the specification repository.
+- The upstream specification at [OpenChargingTechnology/Whitepapers/MetrologicalCBOR](https://github.com/OpenChargingTechnology/Whitepapers/tree/master/MetrologicalCBOR) already carries all four errata; `spec/` is now synced to that copy (revision 1.0, 2026-08-18) and the registry records which revision it was transcribed from. Nothing left to file upstream.
+- `spec/` is git-ignored, so a fresh checkout has none. `npm run fetch:spec` downloads it from the public whitepaper repository, and CI runs that before the tests — with `continue-on-error` so a network failure never blocks a pull request, and without it in the nightly workflow, so a persistent problem surfaces within a day. Absent the spec the suite skips (42 pass, 22 skip, 0 fail) rather than breaking.
+- *Still open:* the decoder questions A5/A6.
 
 ### WP2 — CBOR core (4–6 d)
 
@@ -322,7 +323,7 @@ Total ≈ **24–36 focused person-days** (the table shows mid-range). Calendar 
 | Risk | Impact | Mitigation |
 |---|---|---|
 | Tag 44252 taken at IANA before registration | number change | tag number in exactly one constant (spec anticipates this); v1.0.0 gated on registration |
-| Spec-internal id contradictions propagate into code | wrong wire data — worst case for metrology | **mitigated:** prose errata fixed (2026-08-18, Appendix A); registry generated from one validated data file; a test parses the spec and compares both directions. Residual: that test cannot run in CI while `spec/` is git-ignored (see WP1) |
+| Spec-internal id contradictions propagate into code | wrong wire data — worst case for metrology | **closed:** errata corrected upstream and locally; registry generated from one validated data file; a test fetched into CI parses the spec and compares both directions |
 | Text grammar ambiguities (`dB` → deci-byte; prose strings that parse as values) | silent misinterpretation | unit-symbol-first tokenization, strict anchored grammar, ambiguity fixture table, `paths`/`schema-only` escape hatches, documented pitfalls |
 | Unicode homoglyphs (µ/μ, Ω/Ω) and superscripts | parse failures or duplicated spellings | NFC + explicit homoglyph normalization in the grammar, fixture-tested |
 | Float leakage (JS ecosystem habit) | resolution loss — spec violation | `bigint` end to end; ESLint rule banning `Number` in `model/`/`codec/`/`text/`; property tests compare exact strings |
@@ -339,13 +340,13 @@ Total ≈ **24–36 focused person-days** (the table shows mid-range). Calendar 
 4. **Decoder strictness default** — `strict` rejects discouraged-but-well-formed spellings (`4([0,5])`, `[v, u, 0]` without uncertainty, one-element unit arrays). Plan default: strict on, lenient opt-in. This also needs two decoder-side clarifications in the spec (Appendix A, A5/A6).
 5. **Uncertainty text syntax** — the extension tokens beyond the spec's own `, k=2` (`p=`, `dist=`, `ν=`) are this project's invention; review at WP5 grammar freeze — ideally they feed back into the spec as its recommended display form.
 6. **COSE demo in `examples/`** — worth the dev-dependency, or defer entirely?
-7. **Specification comparison in CI** — `spec/` is git-ignored, so the test that compares the registry against the specification runs only on a maintainer's machine and skips in CI. Options: (a) leave it as a local-only check, (b) commit §4 as a pinned fixture, (c) add a CI step that checks out the specification repository. Plan default: (a), until the specification repository is public.
+7. **Specification comparison in CI** — **decided 2026-08-18:** `npm run fetch:spec` pulls the document from the public whitepaper repository, so CI enforces the comparison without the specification being committed here.
 
 ---
 
 ## Appendix A — Spec errata found during planning
 
-**Status: A1–A4 corrected in [spec/README.md](spec/README.md) on 2026-08-18.** The table below records the pre-correction state, as the reference for the upstream sync (WP1). A5 and A6 remain open — they are design decisions, not errata.
+**Status: closed.** A1–A4 were corrected locally on 2026-08-18, and the upstream specification (revision 1.0, 2026-08-18) carries the same corrections, so document and registry now agree. The table below records the pre-correction state for the history. A5 and A6 remain open — they are design decisions, not errata.
 
 The §4 **table** and the §5/worked-example **byte encodings are internally consistent** — they are the ground truth the registry data (WP1) is built from. Four prose passages in [spec/README.md](spec/README.md) carried identifications from an apparent earlier numbering and contradicted that table:
 

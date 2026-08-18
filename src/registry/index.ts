@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
- * This file is part of Metrological CBOR <https://github.com/OpenChargingCloud/MetrologicalCBOR.TS>
+ * This file is part of Metrological CBOR <https://github.com/Vanaheimr/MetrologicalCBOR.TS>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.

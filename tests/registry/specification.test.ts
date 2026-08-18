@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
- * This file is part of Metrological CBOR <https://github.com/OpenChargingCloud/MetrologicalCBOR.TS>
+ * This file is part of Metrological CBOR <https://github.com/Vanaheimr/MetrologicalCBOR.TS>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ import { fileURLToPath }    from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { UnitRegistry }     from '../../src/registry/index.js';
-import { STANDARD_UNITS }   from '../../src/registry/units.generated.js';
+import { REGISTRY_SPECIFICATION, STANDARD_UNITS } from '../../src/registry/units.generated.js';
 
 
 const ROOT      = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -151,11 +151,37 @@ describe('the specification document', () => {
             console.warn(
                 `\n  ${SPEC_PATH} is not present.\n` +
                 '  The unit registry could not be compared against the specification.\n' +
-                '  Check out the specification repository into spec/ to run these tests.\n',
+                '  Run: npm run fetch:spec\n',
             );
 
         expect(SPEC_PRESENT || SPECIFICATION === '').toBe(true);
 
+    });
+
+});
+
+
+describeSpec('the revision the registry was transcribed from', () => {
+
+    it('is the revision of the document in spec/', () => {
+
+        // The registry records which revision it was transcribed from. A newer
+        // specification is not automatically wrong for the registry, but it is
+        // a reason to look: the comparisons below only cover what they parse.
+        const version = section(/\*\*Version:\*\*\s*([\d.]+)/);
+        const date    = section(/\*\*Version:\*\*\s*[\d.]+\s*\(([\d-]+)\)/);
+
+        expect(version).toBe(REGISTRY_SPECIFICATION.version);
+        expect(date).toBe(REGISTRY_SPECIFICATION.date);
+
+    });
+
+    it('is titled as the registry records it', () => {
+        expect(section(/^#\s+(.+)$/m)).toBe(REGISTRY_SPECIFICATION.title);
+    });
+
+    it('names the repository the fetch script downloads from', () => {
+        expect(REGISTRY_SPECIFICATION.source).toContain('OpenChargingTechnology/Whitepapers');
     });
 
 });

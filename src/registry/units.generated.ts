@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
- * This file is part of Metrological CBOR <https://github.com/OpenChargingCloud/MetrologicalCBOR.TS>
+ * This file is part of Metrological CBOR <https://github.com/Vanaheimr/MetrologicalCBOR.TS>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,12 +32,16 @@ import type { UnitDefinition } from './types.js';
 
 /**
  * The specification revision this registry was transcribed from.
+ *
+ * `npm run fetch:spec` retrieves that document into `spec/`, where the
+ * conformance suite compares it with the registry entry by entry.
  */
 export const REGISTRY_SPECIFICATION = Object.freeze({
-    title:   "CBOR Tag 44252: Metrological Values",
+    title:   "Metrological CBOR (Tag 44252)",
     version: "1.0",
-    date:    "2026-08-14",
+    date:    "2026-08-18",
     section: "4",
+    source:  "https://github.com/OpenChargingTechnology/Whitepapers/tree/master/MetrologicalCBOR",
 } as const);
 
 

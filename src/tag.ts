@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2026 GraphDefined GmbH <achim.friedland@graphdefined.com>
- * This file is part of Metrological CBOR <https://github.com/OpenChargingCloud/MetrologicalCBOR.TS>
+ * This file is part of Metrological CBOR <https://github.com/Vanaheimr/MetrologicalCBOR.TS>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,6 @@
  * changing this line, the specification and the golden vectors is the whole
  * of the change.
  *
- * @see {@link https://github.com/OpenChargingCloud/MetrologicalCBOR.TS/blob/master/spec/README.md | The specification}, Section 8
+ * @see {@link https://github.com/Vanaheimr/MetrologicalCBOR.TS/blob/master/spec/README.md | The specification}, Section 8
  */
 export const METROLOGICAL_VALUE_TAG = 44252;

@@ -17,13 +17,13 @@
     "smart-metering",
     "e-mobility"
   ],
-  "homepage": "https://github.com/OpenChargingCloud/MetrologicalCBOR.TS#readme",
+  "homepage": "https://github.com/Vanaheimr/MetrologicalCBOR.TS#readme",
   "bugs": {
-    "url": "https://github.com/OpenChargingCloud/MetrologicalCBOR.TS/issues"
+    "url": "https://github.com/Vanaheimr/MetrologicalCBOR.TS/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/OpenChargingCloud/MetrologicalCBOR.TS.git"
+    "url": "git+https://github.com/Vanaheimr/MetrologicalCBOR.TS.git"
   },
   "license": "Apache-2.0",
   "author": "GraphDefined GmbH <achim.friedland@graphdefined.com>",
@@ -61,6 +61,7 @@
     "clean": "node -e \"import('node:fs').then(fs => fs.rmSync('dist', { recursive: true, force: true }))\"",
     "generate:registry": "tsx scripts/generate-registry.ts",
     "check:registry": "tsx scripts/generate-registry.ts --check",
+    "fetch:spec": "tsx scripts/fetch-spec.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

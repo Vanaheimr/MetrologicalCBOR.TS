@@ -1,7 +1,7 @@
 # Metrological CBOR (mCBOR) for TypeScript
 
-[![CI](https://github.com/OpenChargingCloud/MetrologicalCBOR.TS/actions/workflows/ci.yml/badge.svg)](https://github.com/OpenChargingCloud/MetrologicalCBOR.TS/actions/workflows/ci.yml)
-[![Nightly](https://github.com/OpenChargingCloud/MetrologicalCBOR.TS/actions/workflows/nightly.yml/badge.svg)](https://github.com/OpenChargingCloud/MetrologicalCBOR.TS/actions/workflows/nightly.yml)
+[![CI](https://github.com/Vanaheimr/MetrologicalCBOR.TS/actions/workflows/ci.yml/badge.svg)](https://github.com/Vanaheimr/MetrologicalCBOR.TS/actions/workflows/ci.yml)
+[![Nightly](https://github.com/Vanaheimr/MetrologicalCBOR.TS/actions/workflows/nightly.yml/badge.svg)](https://github.com/Vanaheimr/MetrologicalCBOR.TS/actions/workflows/nightly.yml)
 [![npm](https://img.shields.io/npm/v/@vanaheimr/metrological-cbor.svg)](https://www.npmjs.com/package/@vanaheimr/metrological-cbor)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
@@ -125,9 +125,10 @@ transmitted, forever.
 
 `src/registry/units.json` is the single source of truth;
 `src/registry/units.generated.ts` is produced from it and never edited by hand.
-Where a working copy of the specification is present under `spec/`,
-`tests/registry/specification.test.ts` parses the document and compares it with
-the registry in both directions, so the two cannot silently drift apart.
+`tests/registry/specification.test.ts` parses the specification document itself
+and compares it with the registry in both directions — table rows, alias list,
+affine marker, SenML mappings and the unit-factor examples — so the two cannot
+silently drift apart.
 
 ## Development
 
@@ -139,9 +140,16 @@ npm run verify
 `verify` runs the registry check, the type checker, the linter, the tests and
 the build — the same sequence as CI.
 
-The specification lives in its own repository and is not committed here. Check
-it out into `spec/` to run the conformance comparison; without it those tests
-skip rather than fail.
+The specification lives in
+[its own repository](https://github.com/OpenChargingTechnology/Whitepapers/tree/master/MetrologicalCBOR)
+and is not committed here. Fetch it to run the conformance comparison; without
+it those tests skip rather than fail.
+
+```bash
+npm run fetch:spec
+```
+
+CI does this before every test run.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the rules that are not negotiable,
 and [SECURITY.md](SECURITY.md) for what counts as a vulnerability in a library
