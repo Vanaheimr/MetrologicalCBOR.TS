@@ -224,7 +224,16 @@ function readNumber(item: CborValue, what: string): DecimalNumber {
                              `${what} has a mantissa that is not an integer.`,
                              { clause: '3.1' });
 
-    return decimal(mantissaItem.value, toExponent(exponentItem.value, what));
+    const exponent = toExponent(exponentItem.value, what);
+
+    // A decimal fraction states decimal places, so its exponent is negative
+    // on the wire; an integral reading is written as an integer (Section 3.1).
+    if (exponent >= 0)
+        throw new ValueError('ERR_VALUE_TYPE',
+                             `${what} is a decimal fraction with the non-negative exponent ${String(exponent)}; an integral reading is written as an integer.`,
+                             { clause: '3.1' });
+
+    return decimal(mantissaItem.value, exponent);
 
 }
 

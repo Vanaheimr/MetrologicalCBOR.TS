@@ -10,13 +10,48 @@ on the IANA registration of tag 44252 — see [WORKPLAN.md](WORKPLAN.md), WP8.
 
 ## [Unreleased]
 
+The [cross-implementation conformance suite](https://github.com/Vanaheimr/MCBORConformanceTests)
+compared this library against the C# reference implementation and the
+specification, and the specification decided every point on which the two
+implementations disagreed. This release implements those decisions.
+
+### Added
+
+- **The exact JSON text path**: `mcborToJsonText` and `jsonTextToMcbor` /
+  `jsonTextToCbor` convert between CBOR and JSON *text* with the digits as
+  written, in both directions — integers of any size, decimal fractions with
+  their scale (`4([-2, 1999])` ↔ `19.99`), floats written with their point
+  (`1.0`), tag 1 as an ISO 8601 instant, tags 2/3/4/37 and the text tags per
+  metrological-text.md §3.1. JavaScript's native JSON tree cannot carry any
+  of that exactly (`JSON.parse` rounds `1.10` and 2^53+1 before a library
+  sees a digit), so the tree-based `mcborToJson`/`jsonToMcbor` remain as the
+  documented lossy convenience.
+- `dist=t` is accepted for `dist=student-t` on input.
+
+### Changed
+
+- **The canonical text output follows metrological-text.md**: integer unit
+  exponents are written with a caret (`9.81 m·s^-2`; superscripts remain
+  accepted input), the explicit scale is `×10^3` (superscript scale remains
+  accepted input), the degrees of freedom are written `ν=` (`nu=` remains
+  accepted, and is what the ASCII mode writes), and a dimensionless reading
+  states the unit `1` (`42 1`) — a bare number is prose, not a reading, which
+  also stops the JSON conversion from tagging every numeric string.
+- **A decimal fraction's exponent is negative on the wire** (specification
+  §3.1): the decoder rejects `4([0, 500])` and `4([2, 5])`, the encoder
+  refuses models holding them, and scientific text input whose exponent
+  leaves no decimal places denotes the integer it equals (`5.0e2 V` is
+  `500 V`).
+- A unit exponent of zero (`m^0`, `[[15, 0]]`) is rejected.
+- A prefix no longer folds onto a symbol that carries a power: `km²` is
+  rejected instead of being read as 10³ m².
+
 ### Fixed
 
 - The text parser enforces two rules its grammar already stated, found by the
-  [cross-implementation conformance suite](https://github.com/Vanaheimr/MCBORConformanceTests):
-  the space between the number and its unit is required (`5.0mA` is no longer
-  read as a reading), and stating the same uncertainty extension twice
-  (`k=2, k=3`) is an error instead of last-one-wins.
+  conformance suite: the space between the number and its unit is required
+  (`5.0mA` is no longer read as a reading), and stating the same uncertainty
+  extension twice (`k=2, k=3`) is an error instead of last-one-wins.
 
 ## [0.9.1] — 2026-08-18
 

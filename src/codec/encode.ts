@@ -24,12 +24,14 @@
  * same signature.
  *
  * One thing the encoder deliberately does *not* normalise is the reading
- * itself. Encoders should write an integral reading as a plain integer, but
- * that is advice for an instrument writing down what it just measured, not
- * licence to rewrite a reading that arrived as `4([0, 5])`. The decimal scale
- * is part of the datum and survives untouched.
+ * itself: the decimal scale is part of the datum and survives untouched. What
+ * it refuses to write is a decimal fraction with a non-negative exponent —
+ * the wire has exactly one spelling for an integral reading, the integer
+ * (specification Section 3.1) — so a model holding one is an error rather
+ * than something to silently rewrite.
  */
 
+import { ValueError }              from '../errors.js';
 import { METROLOGICAL_VALUE_TAG }  from '../tag.js';
 import { encode as encodeCbor }    from '../cbor/writer.js';
 import type { CborEntry, CborValue } from '../cbor/types.js';
@@ -114,6 +116,11 @@ function writeNumber(value: DecimalNumber): CborValue {
 
     if (value.kind === 'int')
         return { type: 'int', value: value.value };
+
+    if (value.exponent >= 0)
+        throw new ValueError('ERR_VALUE_TYPE',
+                             `A decimal fraction with the non-negative exponent ${String(value.exponent)} has no encoding; an integral reading is written as an integer.`,
+                             { clause: '3.1' });
 
     return {
         type:  'tag',

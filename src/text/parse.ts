@@ -36,17 +36,16 @@ import { ValueError }              from '../errors.js';
 import { invariant }               from '../invariant.js';
 import { UnitRegistry }            from '../registry/index.js';
 import type { UnitDefinition }     from '../registry/types.js';
-import { parseDecimal }            from '../model/decimal.js';
+import { integer, parseDecimal }   from '../model/decimal.js';
 import type { DecimalNumber }      from '../model/decimal.js';
 import { SIPrefix, assertSIPrefix, prefixBySymbol } from '../model/prefix.js';
 import { factor, namedUnit, unitExponent, unitProduct } from '../model/unit.js';
-import type { NamedUnit, UnitExponent, UnitFactor, UnitRef } from '../model/unit.js';
+import type { UnitExponent, UnitFactor, UnitRef } from '../model/unit.js';
 import { uncertainty }             from '../model/uncertainty.js';
 import type { UncertaintyDistribution } from '../model/uncertainty.js';
 import { metrologicalValue }      from '../model/value.js';
 import type { MetrologicalValue } from '../model/value.js';
-import { DIMENSIONLESS_UNIT_ID }   from './grammar.js';
-import { fromSuperscript, normalise, SUPERSCRIPT_CHARACTERS } from './symbols.js';
+import { fromSuperscript, normalise, SUPERSCRIPT_CHARACTERS, symbolCarriesPower } from './symbols.js';
 
 /** A number: an integer, a decimal fraction, or either in scientific form. */
 const NUMBER = /^[+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/;
@@ -124,9 +123,13 @@ export function parseMetrologicalValue(text: string, options?: ParseOptions): Me
 
     const unitText = afterScale.trim();
 
-    const { unit, prefix: symbolPrefix } = unitText === ''
-                                               ? { unit: dimensionless(registry), prefix: SIPrefix.None }
-                                               : readUnit(unitText, registry);
+    // A metrological text always states a unit; a dimensionless reading
+    // states the unit "1". A bare number is prose, not a measurement — which
+    // is what keeps the JSON conversion from tagging every numeric string.
+    if (unitText === '')
+        throw syntax(`${JSON.stringify(text)} states no unit of measure; a dimensionless reading states the unit "1".`);
+
+    const { unit, prefix: symbolPrefix } = readUnit(unitText, registry);
 
     if (scalePrefix !== SIPrefix.None && symbolPrefix !== SIPrefix.None)
         throw syntax(`${JSON.stringify(text)} carries a prefix twice, once as a factor of ten and once on the unit.`);
@@ -176,7 +179,7 @@ function readMagnitude(text: string): { value: DecimalNumber; magnitude: Decimal
             throw syntax(`${JSON.stringify(text)} does not begin with a number.`);
 
         return {
-            value:     parseDecimal(match[0]),
+            value:     readNumberText(match[0]),
             magnitude: undefined,
             rest:      text.slice(match[0].length),
         };
@@ -195,10 +198,28 @@ function readMagnitude(text: string): { value: DecimalNumber; magnitude: Decimal
         throw syntax(`${JSON.stringify(text)} brackets something that is not a reading and its uncertainty.`);
 
     return {
-        value:     parseDecimal(inner.slice(0, split.index).trim()),
-        magnitude: parseDecimal(inner.slice(split.index + split[0].length).trim()),
+        value:     readNumberText(inner.slice(0, split.index).trim()),
+        magnitude: readNumberText(inner.slice(split.index + split[0].length).trim()),
         rest:      text.slice(close + 1),
     };
+
+}
+
+
+/**
+ * A number as the reading states it. Scientific notation whose exponent
+ * leaves no decimal places denotes the integer it equals — `5e2` is `500` —
+ * because a decimal fraction states decimal places and its exponent is
+ * negative on the wire (specification Section 3.1).
+ */
+function readNumberText(text: string): DecimalNumber {
+
+    const parsed = parseDecimal(text);
+
+    if (parsed.kind === 'decimal' && parsed.exponent >= 0)
+        return integer(parsed.mantissa * 10n ** BigInt(parsed.exponent));
+
+    return parsed;
 
 }
 
@@ -226,11 +247,6 @@ function readScale(text: string): { prefix: number; rest: string } {
 // ---------------------------------------------------------------------------
 // The unit
 // ---------------------------------------------------------------------------
-
-function dimensionless(registry: UnitRegistry): NamedUnit {
-    return namedUnit(registry.byId(DIMENSIONLESS_UNIT_ID));
-}
-
 
 function readUnit(text: string, registry: UnitRegistry): { unit: UnitRef; prefix: number } {
 
@@ -260,6 +276,13 @@ function readUnit(text: string, registry: UnitRegistry): { unit: UnitRef; prefix
         // quantity as a whole, so `m*ks^-2` would be asking for something this
         // format cannot say  -  and does not mean what it looks like it means.
         const resolved = resolveSymbol(symbol, registry, index === 0);
+
+        // And a folded prefix requires that factor at the first power: "km²"
+        // and "ks^-2" would raise the prefix to the power too, and read as
+        // a million times what a prefixed m² or s^-2 means.
+        if (resolved.prefix !== SIPrefix.None &&
+            !(exponent.kind === 'integer' && exponent.value === 1))
+            throw syntax(`${JSON.stringify(token)} folds a prefix onto a factor that does not stand at the first power.`);
 
         if (index === 0)
             prefix = resolved.prefix;
@@ -357,8 +380,16 @@ export function tryResolveUnitToken(token: string, registry: UnitRegistry, allow
 
         const unit = registry.tryBySymbol(token.slice(length));
 
-        if (unit !== undefined)
-            return { unit, prefix };
+        if (unit === undefined)
+            continue;
+
+        // A prefix never folds onto a symbol that carries a power of its
+        // own: "km²" read as kilo·m² would mean 10³ m², read as (km)² a
+        // million — neither is a spelling this format accepts.
+        if (symbolCarriesPower(unit.symbol))
+            continue;
+
+        return { unit, prefix };
 
     }
 
@@ -421,30 +452,39 @@ function readExtensions(extensions: readonly string[]): StatedExtensions {
             case 'k':
                 if (coverageFactor !== undefined)
                     throw syntax('The coverage factor is stated twice.');
-                coverageFactor = parseDecimal(given);
+                coverageFactor = readNumberText(given);
                 break;
 
             case 'p':
                 if (coverageProbability !== undefined)
                     throw syntax('The coverage probability is stated twice.');
-                coverageProbability = parseDecimal(given);
+                coverageProbability = readNumberText(given);
                 break;
 
-            case 'dist':
+            case 'dist': {
+
                 if (distribution !== undefined)
                     throw syntax('The probability distribution is stated twice.');
-                if (!DISTRIBUTIONS.has(given as UncertaintyDistribution))
+
+                // "t" is the accepted short spelling; "student-t" is the one
+                // that is written (metrological-text \u00A72.6).
+                const spelled = given === 't' ? 'student-t' : given;
+
+                if (!DISTRIBUTIONS.has(spelled as UncertaintyDistribution))
                     throw new ValueError('ERR_UNCERTAINTY_DISTRIBUTION',
                                          `${JSON.stringify(given)} is not a probability distribution.`,
                                          { clause: '3.4' });
-                distribution = given as UncertaintyDistribution;
+
+                distribution = spelled as UncertaintyDistribution;
                 break;
+
+            }
 
             case 'nu':
             case '\u03BD':
                 if (degreesOfFreedom !== undefined)
                     throw syntax('The degrees of freedom are stated twice.');
-                degreesOfFreedom = parseDecimal(given);
+                degreesOfFreedom = readNumberText(given);
                 break;
 
             default:

@@ -139,7 +139,7 @@ describe.runIf(built)('the bundle, with no Node global in sight', () => {
         const format = library['formatMetrologicalValue'] as (value: unknown) => string;
         const parse  = library['parseMetrologicalValue'] as (text: string) => unknown;
 
-        expect(format(parse('9.81 m·s⁻²'))).toBe('9.81 m·s⁻²');
+        expect(format(parse('9.81 m·s⁻²'))).toBe('9.81 m·s^-2');
         expect(format(parse('(230.00 ±0.12) V, k=2'))).toBe('(230.00 ±0.12) V, k=2');
 
     });

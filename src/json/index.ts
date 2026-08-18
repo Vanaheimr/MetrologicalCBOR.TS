@@ -23,12 +23,19 @@
  * it gets the text format; a timestamp or an identification is a string in
  * JSON anyway.
  *
- * **What round-trips.** A document made of readings, text, integers within
- * ±(2^53 − 1), booleans, nulls, arrays and text-keyed maps comes back
- * byte-identical. Everything else is either an error or a stated one-way
- * conversion — byte strings, floats, dates and big integers all lose the
- * distinction that made them what they were, because JSON has no room for it.
- * The options say which, and none of them rounds a number quietly.
+ * Two pairs of entry points, one contract. `mcborToJsonText` and
+ * `jsonTextToMcbor` work on JSON **text** and are exact: numbers keep the
+ * digits they were written with, in both directions, which is what
+ * metrological-text.md Section 3 requires. `mcborToJson` and `jsonToMcbor`
+ * work on the native JSON tree, whose numbers are doubles — convenient
+ * wherever the document is already a tree, and lossy in exactly the ways the
+ * options spell out. None of them rounds a number quietly.
+ *
+ * **What round-trips through the text pair.** Readings, text, integers of
+ * any size, exact decimals, booleans, nulls, arrays and text-keyed maps come
+ * back byte-identical. Byte strings, floats and dates are stated one-way
+ * conversions — JSON has no room for the distinction that made them what
+ * they were.
  */
 
 export {
@@ -42,6 +49,12 @@ export {
     type FromJsonOptions,
     type ReadingDetection,
 } from './from-json.js';
+
+export {
+    jsonTextToCbor,
+    jsonTextToMcbor,
+    mcborToJsonText,
+} from './text.js';
 
 export {
     fromBase64Url,

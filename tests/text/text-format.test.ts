@@ -44,7 +44,8 @@ const MIDDLE_DOT     = '·';
 const PLUS_MINUS     = '±';
 const SQUARE_METER   = 'm²';
 const SUPER_MINUS_2  = '⁻²';
-const TIMES_TEN_3    = '×10³';
+const TIMES_TEN_3    = '×10^3';
+const TIMES_TEN_3_SUPER = '×10³';
 
 
 /** The bytes of a reading given as text, through the model. */
@@ -68,7 +69,7 @@ describe('the readings of Section 5', () => {
         ['1.10 kWh',                              'D9ACDC83C48221186E0203'],
         [`(5.00 ${PLUS_MINUS}0.02) mA`,           'D9ACDC84C482211901F40422C4822102'],
         [`(5 ${PLUS_MINUS}0.5) A`,                'D9ACDC84050400C4822005'],
-        [`9.81 m${MIDDLE_DOT}s${SUPER_MINUS_2}`,  'D9ACDC82C482211903D582820F01820821'],
+        [`9.81 m${MIDDLE_DOT}s^-2`,               'D9ACDC82C482211903D582820F01820821'],
         [`(230.00 ${PLUS_MINUS}0.12) V, k=2`,     'D9ACDC84C482211959D80500A201C482210C0202'],
         [`4.5 nV${MIDDLE_DOT}Hz^-1/2`,            'D9ACDC83C48220182D82820501820982200228'],
     ];
@@ -79,6 +80,10 @@ describe('the readings of Section 5', () => {
 
     it.each(READINGS)('reads %s back to its bytes', (text, hex) => {
         expect(bytesOf(text)).toBe(hex);
+    });
+
+    it('accepts superscript exponents on input, though it never writes them', () => {
+        expect(bytesOf(`9.81 m${MIDDLE_DOT}s${SUPER_MINUS_2}`)).toBe('D9ACDC82C482211903D582820F01820821');
     });
 
 });
@@ -95,24 +100,19 @@ describe('the decimal scale', () => {
 
     });
 
-    it('distinguishes an integer from a fraction of the same value', () => {
+    it('reads an exponent that leaves no decimal places as the integer it equals', () => {
 
-        // 5 is a plain integer on the wire; 5e0 is a decimal fraction that
-        // happens to have no fractional digits. Different bytes, so the text
-        // has to tell them apart too.
-        expect(bytesOf('5 A')).toBe('D9ACDC820504');
-        expect(bytesOf('5e0 A')).toBe('D9ACDC82C48200050 4'.replace(/\s/g, ''));
-        expect(textOf(bytesOf('5e0 A'))).toBe('5e0 A');
+        // A decimal fraction states decimal places, so its exponent is
+        // negative on the wire (specification Section 3.1); "5e0" and
+        // "5.0e2" are the integers 5 and 500.
+        expect(bytesOf('5e0 A')).toBe(bytesOf('5 A'));
+        expect(bytesOf('5.0e2 A')).toBe(bytesOf('500 A'));
 
     });
 
-    it('writes a coarse resolution in scientific form rather than positionally', () => {
-
-        // 5e2 states a resolution of a hundred. Writing it as 500 would read
-        // back as an integer and claim a resolution of one.
-        expect(textOf(bytesOf('5e2 A'))).toBe('5e2 A');
-        expect(bytesOf('5e2 A')).not.toBe(bytesOf('500 A'));
-
+    it('rejects a wire decimal fraction with a non-negative exponent', () => {
+        // 4([0, 5]) A — the second spelling of the integer 5.
+        expect(codeOf(() => decodeMetrologicalValue(hexToBytes('D9ACDC82C482000504')))).toBe('ERR_VALUE_TYPE');
     });
 
 });
@@ -132,7 +132,7 @@ describe('prefixes', () => {
         // meaning the whole reading scaled by 1000.
         const text = textOf('D9ACDC83C482211903D582820F0182082103');
 
-        expect(text).toBe(`9.81 km${MIDDLE_DOT}s${SUPER_MINUS_2}`);
+        expect(text).toBe(`9.81 km${MIDDLE_DOT}s^-2`);
         expect(bytesOf(text)).toBe('D9ACDC83C482211903D582820F0182082103');
 
     });
@@ -146,6 +146,15 @@ describe('prefixes', () => {
         expect(text).toBe(`5${TIMES_TEN_3} ${SQUARE_METER}`);
         expect(bytesOf(text)).toBe('D9ACDC8305188C03');
 
+    });
+
+    it('accepts the superscript scale on input', () => {
+        expect(bytesOf(`5${TIMES_TEN_3_SUPER} ${SQUARE_METER}`)).toBe('D9ACDC8305188C03');
+    });
+
+    it('rejects a prefix folded onto a factor that is not at the first power', () => {
+        expect(codeOf(() => parseMetrologicalValue('5 km²'))).toBe('ERR_TEXT_SYNTAX');
+        expect(codeOf(() => parseMetrologicalValue('2 ks^-2'))).toBe('ERR_TEXT_SYNTAX');
     });
 
     it('become a factor of ten on a product whose leading power is not one', () => {
@@ -167,14 +176,14 @@ describe('prefixes', () => {
 
 describe('the dimensionless unit', () => {
 
-    it('is written as a bare number', () => {
-        expect(textOf(bytesOf('0.95'))).toBe('0.95');
-        expect(bytesOf('0.95')).toBe('D9ACDC82C48221185F01');
+    it('states the unit "1", as every reading states its unit', () => {
+        expect(textOf(bytesOf('0.95 1'))).toBe('0.95 1');
+        expect(bytesOf('0.95 1')).toBe('D9ACDC82C48221185F01');
     });
 
-    it('is what a bare number reads back as', () => {
+    it('reads back as the unit one', () => {
 
-        const value = parseMetrologicalValue('0.95');
+        const value = parseMetrologicalValue('0.95 1');
 
         expect(value.unit.kind).toBe('named');
         if (value.unit.kind === 'named')
@@ -182,13 +191,18 @@ describe('the dimensionless unit', () => {
 
     });
 
+    it('rejects a bare number, which is prose and not a reading', () => {
+        expect(codeOf(() => parseMetrologicalValue('0.95'))).toBe('ERR_TEXT_SYNTAX');
+        expect(codeOf(() => parseMetrologicalValue('42'))).toBe('ERR_TEXT_SYNTAX');
+    });
+
     it('takes a prefix as a factor of ten, having no symbol to fold it into', () => {
-        expect(textOf(bytesOf(`5${TIMES_TEN_3}`))).toBe(`5${TIMES_TEN_3}`);
+        expect(textOf(bytesOf(`5${TIMES_TEN_3} 1`))).toBe(`5${TIMES_TEN_3} 1`);
     });
 
     it('is not the same as percent, which has a symbol', () => {
         expect(textOf(bytesOf('95 %'))).toBe('95 %');
-        expect(bytesOf('95 %')).not.toBe(bytesOf('95'));
+        expect(bytesOf('95 %')).not.toBe(bytesOf('95 1'));
     });
 
 });
@@ -309,8 +323,8 @@ describe('Unicode', () => {
 describe('ASCII input and output', () => {
 
     it.each([
-        ['9.81 m*s^-2',        `9.81 m${MIDDLE_DOT}s${SUPER_MINUS_2}`],
-        ['9.81 m s^-2',        `9.81 m${MIDDLE_DOT}s${SUPER_MINUS_2}`],
+        ['9.81 m*s^-2',        `9.81 m${MIDDLE_DOT}s^-2`],
+        ['9.81 m s^-2',        `9.81 m${MIDDLE_DOT}s^-2`],
         ['(230.00 +/-0.12) V', `(230.00 ${PLUS_MINUS}0.12) V`],
         ['(230.00 +-0.12) V',  `(230.00 ${PLUS_MINUS}0.12) V`],
         ['5x10^3 m2',          `5${TIMES_TEN_3} ${SQUARE_METER}`],
@@ -358,7 +372,7 @@ describe('the uncertainty', () => {
         const hex  = 'D9ACDC84050400A2010105182D';
         const text = textOf(hex);
 
-        expect(text).toBe(`(5 ${PLUS_MINUS}1) A, nu=45`);
+        expect(text).toBe(`(5 ${PLUS_MINUS}1) A, ν=45`);
         expect(bytesOf(text)).toBe(hex);
 
     });

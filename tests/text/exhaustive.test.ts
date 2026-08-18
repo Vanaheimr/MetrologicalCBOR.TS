@@ -41,7 +41,7 @@ import { STANDARD_UNITS }          from '../../src/registry/units.generated.js';
 import { formatMetrologicalValue, parseMetrologicalValue } from '../../src/text/index.js';
 
 const IDS       = STANDARD_UNITS.map(unit => unit.id);
-const EXPONENTS = [-9, -3, -2, -1, 0, 2, 3, 4, 9];
+const EXPONENTS = [-9, -3, -2, -1, 2, 3, 4, 9];
 const RATIONALS: readonly (readonly [number, number])[] = [[-1, 2], [1, 2], [-3, 4], [3, 2]];
 
 const READING = decimal(50, -1);

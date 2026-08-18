@@ -51,7 +51,7 @@ const anyNumber: fc.Arbitrary<DecimalNumber> = fc.oneof(
     fc.bigInt({ min: -(10n ** 30n), max: 10n ** 30n }).map(value => integer(value)),
     fc.tuple(
         fc.bigInt({ min: -(10n ** 30n), max: 10n ** 30n }),
-        fc.integer({ min: -30, max: 30 }),
+        fc.integer({ min: -30, max: -1 }),
     ).map(([mantissa, exponent]) => decimal(mantissa, exponent)),
 );
 
@@ -60,7 +60,7 @@ const anyMagnitude: fc.Arbitrary<DecimalNumber> = fc.oneof(
     fc.bigInt({ min: 0n, max: 10n ** 20n }).map(value => integer(value)),
     fc.tuple(
         fc.bigInt({ min: 0n, max: 10n ** 20n }),
-        fc.integer({ min: -20, max: 20 }),
+        fc.integer({ min: -20, max: -1 }),
     ).map(([mantissa, exponent]) => decimal(mantissa, exponent)),
 );
 
@@ -78,7 +78,7 @@ const anyNamedUnit = fc.oneof(
 );
 
 const anyExponent = fc.oneof(
-    fc.integer({ min: -12, max: 12 }).map(value => unitExponent(value)),
+    fc.integer({ min: -12, max: 12 }).filter(value => value !== 0).map(value => unitExponent(value)),
     fc.tuple(
         fc.integer({ min: -12, max: 12 }).filter(numerator => numerator !== 0),
         fc.integer({ min: 1, max: 12 }),

@@ -1,6 +1,7 @@
 # The mCBOR text format
 
-**Status:** frozen with version 0.2.0 of this library.
+**Status:** follows the official text-format specification,
+[metrological-text.md](https://github.com/OpenChargingTechnology/Whitepapers/blob/master/MetrologicalCBOR/metrological-text.md).
 
 A metrological value written as one line of text: `230 V`, `1.10 kWh`,
 `(230.00 ±0.12) V, k=2`.
@@ -11,17 +12,15 @@ therefore to the same canonical CBOR bytes. That property is what lets a whole
 document be carried through JSON with every measurement in it intact, and every
 rule below exists to keep it.
 
-The format is this library's, not the specification's. [CBOR tag
-44252](https://github.com/OpenChargingTechnology/Whitepapers/tree/master/MetrologicalCBOR)
-defines the bytes; it says nothing about how a reading is written for a human.
-Where the specification does print readings — the table of its Section 5 — this
-format reproduces that column exactly, which is the reason for several of the
-choices below.
+The normative source is the specification's
+[metrological-text.md](https://github.com/OpenChargingTechnology/Whitepapers/blob/master/MetrologicalCBOR/metrological-text.md);
+this document describes the same format from this library's point of view,
+including what its parser tolerates beyond the canonical spelling.
 
 ## 1. Grammar
 
 ```abnf
-reading         = magnitude [ scale ] [ SP unit-expression ] *( "," [ SP ] extension )
+reading         = magnitude [ scale ] SP unit-expression *( "," [ SP ] extension )
 
 magnitude       = number
                 / "(" number [ SP ] plus-minus [ SP ] number ")"
@@ -68,7 +67,7 @@ readings of specification Section 5, written by this library:
 | 1.10 kWh | `1.10 kWh` | `1.10 kWh` |
 | (5.00 ± 0.02) mA | `(5.00 ±0.02) mA` | `(5.00 +/-0.02) mA` |
 | (5 ± 0.5) A | `(5 ±0.5) A` | `(5 +/-0.5) A` |
-| 9.81 m·s⁻² | `9.81 m·s⁻²` | `9.81 m*s^-2` |
+| 9.81 m·s⁻² | `9.81 m·s^-2` | `9.81 m*s^-2` |
 | (230.00 ± 0.12) V, k = 2 | `(230.00 ±0.12) V, k=2` | `(230.00 +/-0.12) V, k=2` |
 | 4.5 nV·Hz^-1/2 | `4.5 nV·Hz^-1/2` | `4.5 nV*Hz^-1/2` |
 
@@ -81,12 +80,13 @@ distinguishes. Three forms do it:
 | On the wire | Written | Why |
 |---|---|---|
 | integer `5` | `5` | The plain form. |
-| decimal fraction, exponent < 0 | `5.0`, `1.10`, `0.005` | Positional: the decimal point marks it as a fraction and the trailing zeros show. |
-| decimal fraction, exponent ≥ 0 | `5e0`, `5e2` | Scientific. `500` would read back as an integer and claim a resolution of one, where `5e2` states a resolution of a hundred. |
+| decimal fraction (exponent < 0) | `5.0`, `1.10`, `0.005` | Positional: the decimal point marks it as a fraction and the trailing zeros show. |
 
-On input, a decimal point or an exponent makes a fraction; a bare run of digits
-is an integer. `5`, `5.0` and `5e0` are therefore three different readings, and
-that is deliberate.
+A decimal fraction's exponent is negative on the wire — an integral reading
+is written as an integer (tag specification, Section 3.1) — so the positional
+form covers every fraction there is. Scientific notation is accepted on
+input, and an exponent that leaves no decimal places denotes the integer it
+equals: `5e0` and `5.0e2` are the integers `5` and `500`.
 
 ## 4. The unit
 
@@ -129,28 +129,22 @@ quietly read as something else.
 
 ### 4.3 Exponents
 
-A whole power is written in superscript, a rational one with a caret:
-`m·s⁻²`, `Hz^-1/2`. The first power is not written at all.
+Every power but the first is written with a caret: `m·s^-2`, `Hz^-1/2`. The
+first power is not written at all. Superscript exponents (`m·s⁻²`) are
+accepted on input — with one guard: superscripts that run together, as the
+two exponents of `m^3^-1` would, are rejected rather than misread.
 
-Two situations force the caret form even for a whole power, and the renderer
-checks for both rather than assuming:
-
-- **The symbol already ends in a superscript.** The cubic metre to the power
-  −1 would be `m³⁻¹`, whose trailing superscripts run together into no exponent
-  at all. Written `m³^-1`.
-- **Symbol and superscript together spell another symbol.** The metre to the
-  third power would be `m³`, which is the registered cubic metre — a different
-  unit. Written `m^3`.
-
-Rational exponents are reduced to lowest terms, so `^2/1` is written `²` and
-`^-2/4` is written `^-1/2`.
+A rational exponent is written in lowest terms with a denominator greater
+than one; `[2, 1]` and `[-2, 4]` are not valid wire spellings, and the text
+side never produces them.
 
 ### 4.4 The dimensionless unit
 
-A reading whose unit is `one` is written as a bare number: `0.95`. A bare
-number parses back to that unit. The percent, permille and parts-per-million
-are *not* dimensionless in this sense — they have symbols and keep them:
-`95 %`.
+A reading whose unit is `one` states it, like every reading states its unit:
+`0.95 1`. A bare number is prose, not a reading — which is what keeps the
+JSON conversion from tagging every numeric string it meets. The percent,
+permille and parts-per-million are *not* dimensionless in this sense — they
+have symbols and keep them: `95 %`.
 
 ## 5. The prefix
 
@@ -166,9 +160,9 @@ Folding requires all three of:
 3. the folded token **reads back as the same prefix and unit** — the centi-day
    would fold into `cd`, which is the candela.
 
-Where any of them fails, the reading is written `5×10³ m²`, and the factor of
-ten is a part of the reading rather than of the number: `5e3 m²` is a different
-reading, whose *value* has an exponent of 3 and whose prefix is none.
+Where any of them fails, the reading is written `5×10^3 m²`, and the factor
+of ten is part of the unit side rather than of the number: `5000 m²` is a
+different reading, whose value is the plain integer and whose prefix is none.
 
 Only the 25 SI prefix exponents are valid. `5x10^4 A` is rejected: there is no
 prefix for ten thousand, and a prefix is not a general scaling factor.
@@ -187,9 +181,10 @@ extensions, in the order the specification lists its map keys:
 | `k=` | the coverage factor the magnitude belongs to | `k=2` |
 | `p=` | the coverage probability | `p=0.95` |
 | `dist=` | the probability distribution | `dist=normal` |
-| `nu=` | the effective degrees of freedom | `nu=45` |
+| `ν=` | the effective degrees of freedom | `ν=45` |
 
-`ν=` is accepted for `nu=` on input; `nu=` is what is written.
+`nu=` is accepted for `ν=` on input and is what the ASCII output writes;
+`dist=t` is accepted for `dist=student-t`.
 
 The magnitude is kept **as reported**, with the coverage factor it belongs to.
 It is never normalised to a standard uncertainty — `u = U / k` is something a
@@ -204,12 +199,13 @@ extension this format does not define.
 |---|---|
 | `±` | `+/-`, `+-` |
 | `·` between factors | `*`, one or more spaces |
-| `m·s⁻²` | `m*s^-2`, `m s^-2` |
-| `×10³` | `x10^3`, `*10^3`, `×10^3` |
+| `m·s^-2` | `m·s⁻²`, `m*s^-2`, `m s^-2` |
+| `×10^3` | `×10³`, `x10^3`, `*10^3` |
 | `Ω` (U+03A9) | U+2126 OHM SIGN — normalisation reconciles them |
 | `µ` (U+00B5) | `μ` U+03BC — normalisation does *not*, so both are listed explicitly |
 | `m²` | `m2` — a registered alias |
-| `nu=45` | `ν=45` |
+| `ν=45` | `nu=45` |
+| `dist=student-t` | `dist=t` |
 | `k=2` | `k = 2` |
 
 Everything else is rejected. The parser never guesses at a symbol it does not

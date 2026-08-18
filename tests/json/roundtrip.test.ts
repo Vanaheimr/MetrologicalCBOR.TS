@@ -45,7 +45,7 @@ import { assertStable }          from '../support/stability.js';
 const anyReading: fc.Arbitrary<CborValue> = fc.record({
     value: fc.oneof(
         fc.bigInt({ min: -(10n ** 12n), max: 10n ** 12n }).map(v => integer(v)),
-        fc.tuple(fc.bigInt({ min: -(10n ** 12n), max: 10n ** 12n }), fc.integer({ min: -12, max: 12 }))
+        fc.tuple(fc.bigInt({ min: -(10n ** 12n), max: 10n ** 12n }), fc.integer({ min: -12, max: -1 }))
           .map(([m, e]) => decimal(m, e)),
     ),
     unit: fc.oneof(

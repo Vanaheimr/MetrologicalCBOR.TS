@@ -44,7 +44,10 @@ describe('exponents', () => {
     it('keeps a whole power whole', () => {
         expect(unitExponent(2)).toStrictEqual({ kind: 'integer', value: 2 });
         expect(unitExponent(-2)).toStrictEqual({ kind: 'integer', value: -2 });
-        expect(unitExponent(0)).toStrictEqual({ kind: 'integer', value: 0 });
+    });
+
+    it('rejects the exponent zero, which states no factor at all', () => {
+        expect(codeOf(() => unitExponent(0))).toBe('ERR_UNIT_EXPONENT_ZERO');
     });
 
     it('reduces a fraction to its lowest terms', () => {

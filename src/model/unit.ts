@@ -80,9 +80,9 @@ export function unitExponent(numerator: number, denominator = 1): UnitExponent {
                              `The exponent denominator ${String(denominator)} is not positive.`,
                              { clause: '3.2' });
 
-    if (numerator === 0 && denominator !== 1)
+    if (numerator === 0)
         throw new ValueError('ERR_UNIT_EXPONENT_ZERO',
-                             'A fractional exponent has a numerator of zero.',
+                             'A unit exponent of zero states no factor at all.',
                              { clause: '3.2' });
 
     const divisor = greatestCommonDivisor(numerator < 0 ? -numerator : numerator, denominator);

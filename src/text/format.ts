@@ -23,16 +23,11 @@
  * reading, byte for byte in its canonical CBOR form, and that is what makes the
  * JSON mapping of this library lossless rather than merely readable.
  *
- * Two consequences fall out of that requirement, and both are visible in the
- * output:
- *
- * - A decimal fraction whose exponent is not negative is written in scientific
- *   form (`5e2`), because `500` would read back as a plain integer and state a
- *   different resolution.
- * - A prefix is folded into the unit symbol only where that is what the SI
- *   means by it. On a symbol that already carries a power, or on a product
- *   whose leading factor does, it is written as a factor of ten instead:
- *   `km^2` would be a *square* kilometre.
+ * One consequence falls out of that requirement and is visible in the output:
+ * a prefix is folded into the unit symbol only where that is what the SI
+ * means by it. On a symbol that already carries a power, or on a product
+ * whose leading factor does, it is written as a factor of ten instead:
+ * `km^2` would be a *square* kilometre.
  */
 
 import { UnitRegistry }            from '../registry/index.js';
@@ -47,7 +42,7 @@ import type { MetrologicalValue }  from '../model/value.js';
 import { DIMENSIONLESS_UNIT_ID }   from './grammar.js';
 import {
     MIDDLE_DOT, MULTIPLICATION_SIGN, PLUS_MINUS,
-    symbolCarriesPower, toSuperscript,
+    symbolCarriesPower,
 } from './symbols.js';
 
 
@@ -95,14 +90,12 @@ export function formatMetrologicalValue(value: MetrologicalValue, options?: Form
     // A prefix that could not be folded into a symbol becomes an explicit
     // factor, which is also the only way to give a dimensionless reading one.
     if (!folded && value.prefix !== SIPrefix.None)
-        out += ascii
-                   ? `x10^${String(value.prefix)}`
-                   : `${MULTIPLICATION_SIGN}10${toSuperscript(value.prefix)}`;
+        out += `${ascii ? 'x' : MULTIPLICATION_SIGN}10^${String(value.prefix)}`;
 
-    // The unit "one" is the neutral element, and a bare number is how a
-    // dimensionless quantity is written. Anything else gets its symbol.
-    if (!dimensionless)
-        out += ` ${formatUnit(value.unit, prefix, ascii, registry)}`;
+    // A metrological text always states its unit — a dimensionless reading
+    // states the unit "1", which is what keeps a bare number from being a
+    // reading at all.
+    out += ` ${formatUnit(value.unit, prefix, ascii, registry)}`;
 
     if (value.uncertainty !== undefined)
         out += formatExtensions(value.uncertainty, ascii);
@@ -213,14 +206,11 @@ function formatFactor(unit:     NamedUnit,
     if (exponent.value === 1)
         return head;
 
-    const caret = `${head}^${String(exponent.value)}`;
+    // The caret form is the canonical spelling (metrological-text §2.1);
+    // superscripts are accepted on input but never written.
+    void registry;
 
-    if (ascii || symbolCarriesPower(unit.unit.symbol))
-        return caret;
-
-    const superscripted = head + toSuperscript(exponent.value);
-
-    return registry.tryBySymbol(superscripted) === undefined ? superscripted : caret;
+    return `${head}^${String(exponent.value)}`;
 
 }
 
@@ -246,12 +236,7 @@ function formatExtensions(value: Uncertainty, ascii: boolean): string {
         out += `, dist=${value.distribution}`;
 
     if (value.degreesOfFreedom !== undefined)
-        out += `, nu=${formatNumber(value.degreesOfFreedom)}`;
-
-    // `ascii` does not change the extensions: they are ASCII already. The
-    // parameter is taken so that a future extension needing a symbol has one
-    // obvious place to honour it.
-    void ascii;
+        out += `, ${ascii ? 'nu' : 'ν'}=${formatNumber(value.degreesOfFreedom)}`;
 
     return out;
 
