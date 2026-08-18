@@ -50,6 +50,9 @@ const BREAK = 0xFF;
 const decoder = new TextDecoder('utf-8', { fatal: true });
 
 
+/**
+ * How strictly to read, and what one input may cost.
+ */
 export interface DecodeOptions {
 
     /**
@@ -64,6 +67,9 @@ export interface DecodeOptions {
 }
 
 
+/**
+ * One data item, and where in the input it ended.
+ */
 export interface DecodeResult {
 
     /** The decoded item. */

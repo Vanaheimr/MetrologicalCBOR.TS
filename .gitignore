@@ -1,8 +1,14 @@
 node_modules/
 dist/
+docs/api/
 coverage/
 *.tsbuildinfo
 .eslintcache
+
+# examples/package.json keeps @noble/curves out of the library's own dependency
+# tree, so the signature-verification example needs its own install.
+examples/node_modules/
+examples/package-lock.json
 
 # Fetched by `npm run fetch:spec` from the whitepaper repository, the same way
 # dist/ is produced by a build. tests/registry/specification.test.ts compares

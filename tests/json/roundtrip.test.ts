@@ -25,7 +25,7 @@
  */
 
 import fc                        from 'fast-check';
-import { describe, expect, it }  from 'vitest';
+import { describe, it }          from 'vitest';
 
 import { bytesToHex }            from '../../src/cbor/hex.js';
 import { encode as encodeCbor }  from '../../src/cbor/writer.js';
@@ -38,6 +38,7 @@ import { uncertainty }           from '../../src/model/uncertainty.js';
 import { metrologicalValue }     from '../../src/model/value.js';
 import { STANDARD_UNITS }        from '../../src/registry/units.generated.js';
 import { jsonToMcbor, mcborToJson } from '../../src/json/index.js';
+import { assertStable }          from '../support/stability.js';
 
 
 /** A reading, as the CBOR item a document would carry. */
@@ -100,6 +101,17 @@ const anyDocument: fc.Arbitrary<CborValue> = fc.letrec<{ value: CborValue }>(tie
 })).value;
 
 
+/**
+ * These use {@link assertStable} rather than a bare `expect`.
+ *
+ * Not for style: the second of them failed twice on a loaded machine and its
+ * reported counterexample passed on replay, after some two million further
+ * executions found nothing. A property-based tool shrinks towards whatever
+ * happened to fail, so an unstable execution is reported as a minimal
+ * counterexample that is not one — which is the most misleading output a test
+ * can produce. `assertStable` repeats the computation before it reports, and
+ * says which of the two it is. See WORKPLAN.md, WP8.
+ */
 describe('the profile round-trips', () => {
 
     it('a document comes back byte-identical', () => {
@@ -107,7 +119,9 @@ describe('the profile round-trips', () => {
         fc.assert(
             fc.property(anyDocument, document => {
                 const bytes = encodeCbor(document);
-                expect(bytesToHex(jsonToMcbor(mcborToJson(bytes)))).toBe(bytesToHex(bytes));
+                assertStable(() => bytesToHex(jsonToMcbor(mcborToJson(bytes))),
+                             bytesToHex(bytes),
+                             () => bytesToHex(bytes));
             }),
             { numRuns: 20_000 },
         );
@@ -118,9 +132,19 @@ describe('the profile round-trips', () => {
 
         fc.assert(
             fc.property(anyDocument, document => {
-                const json  = mcborToJson(encodeCbor(document));
-                const again = JSON.parse(JSON.stringify(json)) as typeof json;
-                expect(bytesToHex(jsonToMcbor(again))).toBe(bytesToHex(encodeCbor(document)));
+
+                const bytes = encodeCbor(document);
+
+                assertStable(
+                    () => {
+                        const json  = mcborToJson(bytes);
+                        const again = JSON.parse(JSON.stringify(json)) as typeof json;
+                        return bytesToHex(jsonToMcbor(again));
+                    },
+                    bytesToHex(bytes),
+                    () => bytesToHex(bytes),
+                );
+
             }),
             { numRuns: 20_000 },
         );
@@ -132,7 +156,9 @@ describe('the profile round-trips', () => {
         fc.assert(
             fc.property(anyReading, reading => {
                 const bytes = encodeCbor(reading);
-                expect(bytesToHex(jsonToMcbor(mcborToJson(bytes)))).toBe(bytesToHex(bytes));
+                assertStable(() => bytesToHex(jsonToMcbor(mcborToJson(bytes))),
+                             bytesToHex(bytes),
+                             () => bytesToHex(bytes));
             }),
             { numRuns: 20_000 },
         );

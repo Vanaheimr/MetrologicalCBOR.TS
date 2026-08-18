@@ -39,6 +39,13 @@ const TAG_NEGATIVE_BIGNUM = 3n;
 const encoder = new TextEncoder();
 
 
+/**
+ * What to do where a document was not written deterministically.
+ *
+ * Both defaults produce the canonical encoding. Both alternatives exist for
+ * one reason: re-serialising a document this library did not write, whose
+ * bytes somebody signed.
+ */
 export interface EncodeOptions {
 
     /**

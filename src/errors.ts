@@ -183,6 +183,9 @@ export type McborErrorCode =
     | 'ERR_PREFIX_REDUNDANT';
 
 
+/**
+ * What an error carries beyond its message: the clause it enforces.
+ */
 export interface McborErrorOptions extends ErrorOptions {
 
     /**

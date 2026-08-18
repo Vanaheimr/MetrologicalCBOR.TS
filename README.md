@@ -21,12 +21,12 @@ never heard of the tag still sees a well-formed array of standard numbers.
 
 ## Status
 
-**0.9.0 — the API freeze.** mCBOR is read and written, all ten examples of
-specification Section 5 byte for byte, a whole document travels through JSON
-with every measurement intact, and [docs/conformance.md](docs/conformance.md)
-maps every normative clause to the code that enforces it and the test that
-proves it. What remains is documentation and the release; see
-[WORKPLAN.md](WORKPLAN.md).
+**0.9.1 — finished, and waiting on IANA.** mCBOR is read and written, all ten
+examples of specification Section 5 byte for byte, a whole document travels
+through JSON with every measurement intact,
+[docs/conformance.md](docs/conformance.md) maps every normative clause to the
+code that enforces it and the test that proves it, and the four signatures over
+the specification's worked record verify against bytes this library produced.
 
 | Work package | State |
 |---|---|
@@ -38,10 +38,12 @@ proves it. What remains is documentation and the release; see
 | WP5 — Text format: grammar, renderer, parser | done — **v0.2.0** |
 | WP6 — Document-level CBOR/JSON conversion | done — **v0.3.0** |
 | WP7 — Hardening and conformance | done — **v0.9.0** |
-| WP8 — Documentation and release | next |
+| WP8 — Documentation, examples and release | done — **v0.9.1** |
 
-Version 1.0.0 is gated on the IANA registration of the tag. Until then the
-public API may change in minor releases.
+Version 1.0.0 is gated on the IANA registration of the tag, which is the point
+at which the numeric unit identifications become permanent. Until then the
+public API may change in minor releases — though it is frozen as of 0.9.0, and
+nothing is expected to. See [docs/releasing.md](docs/releasing.md).
 
 ## Installation
 
@@ -220,25 +222,41 @@ const extended = registry.withPrivateUnits({
 });
 ```
 
-## What is planned
+## Signing it
 
-The shape the codec is heading for, from [WORKPLAN.md](WORKPLAN.md):
+The library does no cryptography and never will. Signing belongs to COSE, and a
+data format that also carried a crypto stack would be unusable as the leaf of
+somebody else's schema. What the library does is produce the bytes a signature
+is over, exactly — and [examples/06](examples/06-verify-a-signed-record.ts)
+checks that against the specification's own worked record:
 
-```ts
-const v = MetrologicalValue.of({
-    value:       { mantissa: 110n, exponent: -2 },   // 1.10, exactly
-    unit:        Units.WattHour,
-    prefix:      SIPrefix.Kilo,
-    uncertainty: { magnitude: { mantissa: 12n, exponent: -1 }, k: 2 },
-});
-
-v.encode();                       // deterministic bytes, suitable for signing
-v.toString();                     // '(1.10 ±1.2) kWh, k=2'
-MetrologicalValue.parse('230 V'); // the text form, losslessly
-
-mcborToJson(bytes);               // every metrological value becomes one string
-jsonToMcbor(json);                // and back
 ```
+station   ES256   verifies
+          re-sign reproduces the recorded signature byte for byte
+
+meter[0]  ESB256  verifies   (1234.567 ±12.3) kWh, k=2, p=0.95, dist=normal
+meter[1]  ESB256  verifies   (1259.869 ±12.6) kWh, k=2, p=0.95, dist=normal
+
+operator  ES384   verifies
+```
+
+The second line is the stronger claim. That record is signed deterministically
+(RFC 6979), so a signature is a function of what it signs: re-signing the
+`Sig_structure` this library builds reproduces the recorded signature byte for
+byte, which a construction differing by one byte could not do.
+
+## Examples
+
+Six runnable programs, in [examples/](examples/):
+
+```bash
+npx tsx examples/01-a-reading.ts
+```
+
+They are tested by running them, because documentation that is not executed
+rots.
+
+## Two commitments
 
 Two design commitments run through all of it:
 
@@ -297,8 +315,11 @@ npm run fetch:spec
 
 CI does this before every test run.
 
+`npm run docs:api` builds the API reference into `docs/api`.
+
 See [docs/conformance.md](docs/conformance.md) for the clause-by-clause matrix,
 [docs/text-format.md](docs/text-format.md) for the text grammar,
+[docs/releasing.md](docs/releasing.md) for what publishing takes,
 [CONTRIBUTING.md](CONTRIBUTING.md) for the rules that are not negotiable,
 and [SECURITY.md](SECURITY.md) for what counts as a vulnerability in a library
 that parses signed, legally relevant measurement data.

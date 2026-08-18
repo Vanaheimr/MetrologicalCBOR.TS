@@ -106,6 +106,12 @@ export function distributionById(id: number): UncertaintyDistribution {
 export type UncertaintyForm = 'bare' | 'map';
 
 
+/**
+ * A GUM measurement uncertainty, as the certificate stated it.
+ *
+ * Only the magnitude is required. Everything else absent means "not stated",
+ * which is a different claim from a default.
+ */
 export interface UncertaintyOptions {
 
     // The optional fields accept an explicit `undefined` as well as being

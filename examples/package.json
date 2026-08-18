@@ -1,0 +1,12 @@
+{
+  "name": "@vanaheimr/metrological-cbor-examples",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Runnable examples for @vanaheimr/metrological-cbor. Not published.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "comment": "The library itself has zero runtime dependencies and must keep them. The one dependency here is for the signature-verification example alone, and it lives in this file rather than in the root one so that a root `npm ci` — which is what CI runs — never installs a cryptography library to test a data format.",
+  "devDependencies": {
+    "@noble/curves": "^2.3.0"
+  }
+}

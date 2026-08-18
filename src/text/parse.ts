@@ -56,8 +56,8 @@ const NUMBER = /^[+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/;
  *
  * Both spellings of the exponent are captured by one group rather than by one
  * group each. An alternation of two groups leaves exactly one of them absent,
- * and every reader of the match then has to restate which \u2014 a fact the pattern
- * already knows and the type system cannot see.
+ * and every reader of the match then has to restate which  -  a fact the
+ * pattern already knows and the type system cannot see.
  */
 const SCALE = /^\s*[\u00D7x*]\s*10\s*(\^\s*[+-]?\d+|[\u207B\u207A\u2070\u00B9\u00B2\u00B3\u2074-\u2079]+)/;
 
@@ -77,6 +77,9 @@ const DISTRIBUTIONS = new Set<UncertaintyDistribution>([
 ]);
 
 
+/**
+ * What to resolve unit symbols against.
+ */
 export interface ParseOptions {
 
     /**

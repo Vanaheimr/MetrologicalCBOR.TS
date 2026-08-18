@@ -58,6 +58,9 @@ export type ReadingDetection =
     | ((text: string, path: JsonPath) => boolean);
 
 
+/**
+ * Which JSON strings are readings, and what to resolve their units against.
+ */
 export interface FromJsonOptions {
 
     /** The registry to resolve units against. Defaults to the standard one. */

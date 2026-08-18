@@ -41,6 +41,9 @@ import { sameUncertaintyRepresentation } from './uncertainty.js';
 import type { Uncertainty }       from './uncertainty.js';
 
 
+/**
+ * The four things a reading is: a number, a unit, a scale and — where it was stated — an uncertainty.
+ */
 export interface MetrologicalValueOptions {
 
     /** The reading, scaled by the prefix and expressed in the unit. */

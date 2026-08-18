@@ -56,6 +56,28 @@ messages, issues and pull requests.
 - Negative tests belong to every normative MUST.
 - Property-based round trips guard the three representations against each
   other: bytes, model, text.
+- The fuzz suites in `tests/fuzz` measure how often their corpus is *accepted*,
+  not only what it produces. Every other property there is of the form "if it
+  was accepted, then …", which holds vacuously over a corpus that has stopped
+  reaching the decoder — and a fuzzer that reports green while covering nothing
+  is worse than none. If you narrow the corpus, expect those floors to fail,
+  and fix the corpus rather than the floor.
+
+## Documentation
+
+- Every exported function, class and interface carries a doc comment saying
+  what it is for, not what it does. `npm run docs:api` builds the reference.
+- Typedoc's `notDocumented` check is deliberately off. What it reports is the
+  discriminant and payload fields of tagged unions — `CborInt.type` is `'int'`,
+  `DecimalFraction.mantissa` is a `bigint` — where a sentence restates the type
+  and nothing else. A hundred such warnings hide the one that matters, so what
+  stays on is the check for a symbol reachable from the API and not exported,
+  and the one for a link that goes nowhere. Both are errors.
+- `docs/conformance.md` is tested. A new error code that does not say which
+  clause it enforces fails `tests/conformance.test.ts`.
+- The examples in `examples/` are tested too, by running them. Documentation
+  that is not executed rots, and a rotted example is the first thing a reader
+  meets.
 
 ## Commits and pull requests
 

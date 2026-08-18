@@ -44,6 +44,9 @@ import type { MetrologicalValue }  from '../model/value.js';
 const TAG_DECIMAL_FRACTION = 4;
 
 
+/**
+ * How to spell a unit that arrived spelled two ways.
+ */
 export interface EncodeValueOptions {
 
     /**

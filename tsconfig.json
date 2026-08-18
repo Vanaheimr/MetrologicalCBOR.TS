@@ -29,5 +29,5 @@
 
     "types": ["node"]
   },
-  "include": ["src", "tests", "scripts", "*.config.ts"]
+  "include": ["src", "tests", "scripts", "examples", "*.config.ts"]
 }

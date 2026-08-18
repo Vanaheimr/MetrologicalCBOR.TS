@@ -10,6 +10,61 @@ on the IANA registration of tag 44252 — see [WORKPLAN.md](WORKPLAN.md), WP8.
 
 ## [Unreleased]
 
+## [0.9.1] — 2026-08-18
+
+Documentation, examples and the release machinery (WP8). No API change: the
+freeze declared in 0.9.0 holds.
+
+### Added
+
+- `examples/`: six runnable programs, each printing something a reader can check
+  against the specification — a reading on the wire, a document through JSON, a
+  calibration certificate, a foreign 713-byte signed record, a private-use unit,
+  and the signatures over the worked example.
+- **The signature example verifies all four signatures over the specification's
+  worked record**, and does something stronger than verify: because the
+  specification signs deterministically (RFC 6979), re-signing the
+  `Sig_structure` this library builds reproduces the recorded signature byte for
+  byte. A construction that differed by one byte could not. All three key
+  identifiers are recomputed too, as RFC 9679 thumbprints over this library's
+  own canonical encoding.
+- `@noble/curves` for that one example, in `examples/package.json` rather than
+  the library's own, so a root `npm ci` never installs a cryptography library to
+  test a data format. Without it the example says so and exits cleanly.
+- `tests/examples.test.ts` runs every example and checks its output.
+  Documentation that is not executed rots, and a rotted example is the first
+  thing a reader meets.
+- `tests/bundle.test.ts` loads the built bundle in a context with **no Node
+  globals at all** — no `process`, no `require`, no `Buffer` — which is a
+  stricter environment than a browser, so "runs in a browser" stops being a
+  claim. It also asserts what the published tarball contains.
+- API documentation: `npm run docs:api` (typedoc), and a CI job that builds it.
+- `docs/releasing.md`: what publishing takes, why provenance requires a
+  workflow, and what 1.0.0 is waiting for.
+
+### Fixed
+
+- The build wrote the `sourceMappingURL` comment twice into every bundle, once
+  itself and once through esbuild. `scripts/finish-build.ts` keeps one.
+- The published package would have carried the generated API reference — 272
+  files of HTML that belong on a website, tripling the tarball. The `files`
+  manifest names `docs/*.md` now, and a test asserts no HTML is in it.
+- `npm run verify` builds before it tests rather than after, because one test is
+  about the build artefact and would otherwise have skipped in CI.
+- Summaries for the nine option interfaces that had documented members and no
+  documented whole.
+
+### Known
+
+- One property in `tests/json/roundtrip.test.ts` has failed twice under load
+  with a counterexample that does not reproduce — replaying it passes, and some
+  two million further executions found nothing. The property is therefore not a
+  function of its input, and the value the tool reports is not the cause. The
+  three properties there now go through a helper that repeats the computation
+  before reporting and says which of the two it is, so the next occurrence is
+  diagnostic rather than misleading. **The fault is open**; see WORKPLAN.md,
+  WP8, for what has been ruled out.
+
 ## [0.9.0] — 2026-08-18
 
 **The API freeze.** Nothing new to do; everything that was here, held against

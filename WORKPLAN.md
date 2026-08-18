@@ -335,12 +335,38 @@ Every property in those suites has the form "if it was accepted, then …", whic
 - **`sameNumericValue` is removed.** An unused, untested one-line wrapper is surface that an API freeze commits to keeping.
 - **The conformance matrix is tested.** `tests/conformance.test.ts` checks that every path it points at exists, that every line anchor is still inside its file, and that every error code the library has appears in it — so a new normative check cannot be added without saying which clause it enforces. Prose does not fail a build; this does.
 
-### WP8 — Documentation, examples, release (2–3 d)
+### WP8 — Documentation, examples, release (2–3 d) — **done 2026-08-18, released as v0.9.1**
 
 - README (badges, quick start, API overview, spec link, ChargyCore-style layout), typedoc API docs, examples incl. the optional COSE verification demo (`@noble/curves` as dev-dependency in `examples/` only).
 - Release process rehearsal: `0.1.0` after WP4, `0.2.0` after WP5, `0.3.0` after WP6, `0.9.0` API freeze after WP7.
 - **v1.0.0 gate:** the IANA registration of tag 44252 is recorded (spec: "the numeric identifications … become permanent with the IANA registration"). The tag number lives in exactly one constant, mirroring the spec's own guidance, in case 44252 is taken first.
-- **Acceptance:** `npm publish` with provenance from the release workflow; install-and-run smoke test of the published package in Node and a browser bundle.
+- **Acceptance:** met but for the last step, which is the maintainer's: the release workflow is rehearsed with `npm publish --dry-run` and its tarball asserted by a test, and the bundle is exercised in a browser-only context. **`npm publish` itself has not been run** — no version of this package is on npm, and the first `git push --tags` is what changes that. [docs/releasing.md](docs/releasing.md) is what it takes.
+
+**The COSE demo, which was open question 6, is worth the dependency**
+
+All four signatures over the specification's worked record verify — the meter's two, the station's, and the operator's countersignature — and the station's is *reproduced byte for byte* by re-signing the `Sig_structure` this library builds. RFC 6979 is what makes that possible and what makes it worth having: the nonce is derived from the key and the message, so a signature is a function of what it signs, and a construction differing by one byte could not produce the same 64 bytes. That is a far stronger statement than "the encoder looks right", and it is the one a reference implementation should be able to make.
+
+The three key identifiers are recomputed as well, as RFC 9679 thumbprints over this library's own canonical encoding of each COSE key. They match — which independently exercises the deterministic encoder against a value nobody wrote down for it.
+
+`@noble/curves` lives in `examples/package.json` rather than the root, so a root `npm ci` never installs a cryptography library to test a data format. Without it the example says so and exits cleanly, and its test skips; a CI job installs it and runs the example for real.
+
+**Findings**
+
+- **A property test failed twice with a counterexample that was not one, and it is still unexplained.** `tests/json/roundtrip.test.ts`, *the JSON survives being written and read as text*, failed during two full runs under coverage. fast-check reported a shrunk counterexample; replaying it by seed and path **passes**, reconstructing the document by hand **passes**, and roughly **two million further executions** found nothing — 400 000 unbiased samples, 400 000 biased runs standalone, and 1 200 000 inside six further full runs under coverage. Ruled out along the way: the writer returning a view onto a reused buffer (it returns a copy), shared registry state (`withPrivateUnits` copies), non-ASCII or lone surrogates in the generated data (`fc.string` yields printable ASCII only), and member ordering (the encoder sorts, so order cannot matter).
+
+  What is certain is that the property is **not a function of its input**, because a property-based tool shrinks towards whatever happened to fail — so an unstable execution is reported as a minimal counterexample that does not reproduce, which is the most misleading output a test can produce. The three properties there now go through `assertStable`, which repeats the computation before reporting and says which of the two it is, printing the document as hexadecimal so the next occurrence can be replayed directly instead of through the generator. **This is instrumentation, not a fix; the fault is open.** It is a known-flaky test in a suite that is otherwise trusted, and it should be treated that way rather than as noise.
+
+- **ECDSA's low-S convention is a real interoperability trap.** The meter signs without normalising `s`, and several libraries — noble among them — reject a high-S signature by default under an anti-malleability policy that Bitcoin made conventional and COSE does not impose. Four hours of "the signature is wrong" is one `lowS: false` away from "the signature is fine", and the failure looks exactly like a bad encoder. Named in the example and in `examples/README.md`.
+- **The build wrote `sourceMappingURL` twice** into every bundle, once itself and once through esbuild. Harmless, and wrong in an artifact that goes to a registry and stays there. `scripts/finish-build.ts` keeps one, and a test asserts it.
+- **The published package would have carried the generated API reference** — 272 files of HTML, tripling the tarball — because the `files` manifest named `docs` wholesale. It names `docs/*.md` now, and `tests/bundle.test.ts` asserts the whole shape of what would be published rather than trusting the manifest.
+- **`npm run verify` built after it tested**, so the bundle test would have skipped in CI, which is the one place it matters. Build now comes first.
+
+**Decisions taken here**
+
+- **"Runs in a browser" is a test, not a claim.** The bundle is loaded in a V8 context holding only the globals a browser guarantees — no `process`, no `require`, no `Buffer`, no `__dirname` — which is stricter than a browser rather than looser, so the usual failure mode (a `Buffer` that happened to be in scope) cannot hide. A source-level check sits beside it, because a Node API reached for on an untaken branch would pass the sandbox and still break a browser.
+- **The examples are tested by running them.** Documentation that is not executed rots, and a rotted example is the first thing a reader meets.
+- **The generated API reference is not published to npm.** It belongs on a website; `docs/*.md` ships, `docs/api` does not.
+- **Typedoc's `notDocumented` validation is off, and `notExported` and `invalidLink` are errors.** What the first reports is the discriminant and payload fields of tagged unions, where a sentence restates the type and nothing else — a hundred such warnings hide the one that matters. Recorded in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### Dependency graph
 
@@ -404,7 +430,8 @@ Versioning: SemVer; 0.x during WP4–WP7 (published early — real feedback beat
 | ~~M3~~ | ~~WP5~~ → **v0.2.0** | **done 2026-08-18** — grammar frozen, lossless text round-trip | 21 d |
 | ~~M4~~ | ~~WP6~~ → **v0.3.0** | **done 2026-08-18** — document JSON round-trip | 24 d |
 | ~~M5~~ | ~~WP7~~ → **v0.9.0** | **done 2026-08-18** — conformance matrix complete, fuzzing in nightly, 100 % on `codec/` and `text/` | 28 d |
-| M6 | WP8 → **v1.0.0** | published with provenance; IANA recorded | 31 d |
+| ~~M6~~ | ~~WP8~~ → **v0.9.1** | **done 2026-08-18** — examples, API docs, browser bundle proven, release rehearsed | 31 d |
+| M7 | **v1.0.0** | `npm publish` run by the maintainer; IANA registration of tag 44252 recorded | — |
 
 Total ≈ **24–36 focused person-days** (the table shows mid-range). Calendar time depends on availability; the critical path is WP2 → WP3 → WP5.
 
@@ -432,7 +459,7 @@ Total ≈ **24–36 focused person-days** (the table shows mid-range). Calendar 
 3. **JSON → mCBOR detection default** — **taken by default, not decided:** `readings: 'auto'` try-parses every candidate string, which is what makes the round trip work without configuration, at the documented cost that a prose field holding `"1 h"` becomes one hour. A predicate is available per path. Cheap to flip to `'none'` if that trade is wrong for the intended consumers.
 4. **Decoder strictness default** — **decided 2026-08-18: strict on, lenient opt-in.** Strict rejects five discouraged-but-well-formed spellings (`4([0,5])`, `[v, u, 0]` without uncertainty, one-element unit arrays, an uncertainty map stating only a magnitude, and — added in WP7 — a rational exponent not in lowest terms). Each is a second way of writing something the format can already write, which §6 does not permit; lenient mode reads and normalises all five, which is what the specification requires of a decoder. Listed with their reasons in [docs/conformance.md](docs/conformance.md) §9. **Worth feeding back to the specification:** §3.2 tells encoders what to write and decoders what to reduce, but says nothing about what a decoder should *refuse* — the gap that let the unreduced exponent through for three work packages.
 5. **Uncertainty text syntax** — the extension tokens beyond the spec's own `, k=2` (`p=`, `dist=`, `ν=`) are this project's invention; review at WP5 grammar freeze — ideally they feed back into the spec as its recommended display form.
-6. **COSE demo in `examples/`** — worth the dev-dependency, or defer entirely?
+6. **COSE demo in `examples/`** — **decided 2026-08-18: worth it.** All four signatures over the worked record verify, and the station's is reproduced byte for byte by re-signing the structure this library builds. The dependency lives in `examples/package.json`, so the library's own tree stays empty and a root `npm ci` never installs it.
 7. **Specification comparison in CI** — **decided 2026-08-18:** `npm run fetch:spec` pulls the document from the public whitepaper repository, so CI enforces the comparison without the specification being committed here.
 
 ---

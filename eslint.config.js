@@ -7,8 +7,9 @@ export default tseslint.config(
   {
     ignores: [
       'dist/**',
+      'docs/api/**',
       'coverage/**',
-      'node_modules/**',
+      '**/node_modules/**',
       'src/registry/units.generated.ts',
     ],
   },
@@ -35,8 +36,14 @@ export default tseslint.config(
   },
 
   {
-    files: ['scripts/**/*.ts'],
-    rules: { 'no-console': 'off' },
+    // Examples exist to be read and run: printing is the point, and the
+    // non-null assertions that would be sloppy in the library are what keeps
+    // an example about the format rather than about narrowing types.
+    files: ['scripts/**/*.ts', 'examples/**/*.ts'],
+    rules: {
+      'no-console': 'off',
+      '@typescript-eslint/no-non-null-assertion': 'off',
+    },
   },
 
   {
