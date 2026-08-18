@@ -10,6 +10,14 @@ on the IANA registration of tag 44252 — see [WORKPLAN.md](WORKPLAN.md), WP8.
 
 ## [Unreleased]
 
+### Fixed
+
+- The text parser enforces two rules its grammar already stated, found by the
+  [cross-implementation conformance suite](https://github.com/Vanaheimr/MCBORConformanceTests):
+  the space between the number and its unit is required (`5.0mA` is no longer
+  read as a reading), and stating the same uncertainty extension twice
+  (`k=2, k=3`) is an error instead of last-one-wins.
+
 ## [0.9.1] — 2026-08-18
 
 Documentation, examples and the release machinery (WP8). No API change: the

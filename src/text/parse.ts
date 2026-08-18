@@ -116,6 +116,12 @@ export function parseMetrologicalValue(text: string, options?: ParseOptions): Me
 
     const { prefix: scalePrefix, rest: afterScale } = readScale(rest);
 
+    // The grammar puts a space between the number (with its scale) and the
+    // unit: "5.0mA" is not a reading. Without this check the unit would parse
+    // anyway, and the format would accept a spelling it never writes.
+    if (afterScale !== '' && !/^\s/.test(afterScale))
+        throw syntax(`${JSON.stringify(text)} is missing the space between the number and its unit.`);
+
     const unitText = afterScale.trim();
 
     const { unit, prefix: symbolPrefix } = unitText === ''
@@ -413,14 +419,20 @@ function readExtensions(extensions: readonly string[]): StatedExtensions {
         switch (name) {
 
             case 'k':
+                if (coverageFactor !== undefined)
+                    throw syntax('The coverage factor is stated twice.');
                 coverageFactor = parseDecimal(given);
                 break;
 
             case 'p':
+                if (coverageProbability !== undefined)
+                    throw syntax('The coverage probability is stated twice.');
                 coverageProbability = parseDecimal(given);
                 break;
 
             case 'dist':
+                if (distribution !== undefined)
+                    throw syntax('The probability distribution is stated twice.');
                 if (!DISTRIBUTIONS.has(given as UncertaintyDistribution))
                     throw new ValueError('ERR_UNCERTAINTY_DISTRIBUTION',
                                          `${JSON.stringify(given)} is not a probability distribution.`,
@@ -430,6 +442,8 @@ function readExtensions(extensions: readonly string[]): StatedExtensions {
 
             case 'nu':
             case '\u03BD':
+                if (degreesOfFreedom !== undefined)
+                    throw syntax('The degrees of freedom are stated twice.');
                 degreesOfFreedom = parseDecimal(given);
                 break;
 

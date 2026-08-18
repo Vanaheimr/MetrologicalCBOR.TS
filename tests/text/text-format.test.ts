@@ -375,6 +375,13 @@ describe('the uncertainty', () => {
         expect(codeOf(() => parseMetrologicalValue(`(5 ${PLUS_MINUS}1) A, q=2`))).toBe('ERR_TEXT_SYNTAX');
     });
 
+    it('rejects the same statement twice', () => {
+        expect(codeOf(() => parseMetrologicalValue(`(5 ${PLUS_MINUS}1) A, k=2, k=3`))).toBe('ERR_TEXT_SYNTAX');
+        expect(codeOf(() => parseMetrologicalValue(`(5 ${PLUS_MINUS}1) A, p=0.95, p=0.99`))).toBe('ERR_TEXT_SYNTAX');
+        expect(codeOf(() => parseMetrologicalValue(`(5 ${PLUS_MINUS}1) A, dist=normal, dist=normal`))).toBe('ERR_TEXT_SYNTAX');
+        expect(codeOf(() => parseMetrologicalValue(`(5 ${PLUS_MINUS}1) A, nu=45, ν=45`))).toBe('ERR_TEXT_SYNTAX');
+    });
+
     it('rejects an unknown distribution', () => {
         expect(codeOf(() => parseMetrologicalValue(`(5 ${PLUS_MINUS}1) A, dist=bimodal`)))
             .toBe('ERR_UNCERTAINTY_DISTRIBUTION');
@@ -399,6 +406,8 @@ describe('what the parser refuses', () => {
         ['5..0 A',        'a malformed number'],
         ['5 m^',          'a caret with no exponent'],
         ['5 m^1/0',       'a zero denominator'],
+        ['5.0mA',         'a missing space before the unit'],
+        ['(5 ±1)A',  'a missing space after the bracket'],
     ])('rejects %s (%s)', text => {
         expect(codeOf(() => parseMetrologicalValue(text))).not.toBe('no throw');
     });
