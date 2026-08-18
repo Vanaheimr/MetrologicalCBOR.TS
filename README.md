@@ -131,7 +131,7 @@ import { formatMetrologicalValue, parseMetrologicalValue } from '@vanaheimr/metr
 formatMetrologicalValue(reading);            // '(230.00 ±0.12) V, k=2'
 formatMetrologicalValue(reading, { ascii: true });  // '(230.00 +/-0.12) V, k=2'
 
-parseMetrologicalValue('9.81 m·s⁻²');        // and 'm*s^-2', and 'm s^-2'
+parseMetrologicalValue('9.81 m·s⁻²');        // and 'm*s^-2'
 ```
 
 This is a second encoding rather than a pretty-printing: what is written reads

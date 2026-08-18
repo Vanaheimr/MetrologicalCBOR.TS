@@ -35,7 +35,7 @@ sign            = "+" / "-"
 scale           = ( %x00D7 / "x" / "*" ) "10" ( "^" [ sign ] 1*DIGIT / 1*superscript )
 
 unit-expression = factor *( separator factor )
-separator       = %x00B7 / "*" / 1*SP          ; MIDDLE DOT, asterisk or space
+separator       = *SP ( %x00B7 / "*" ) *SP     ; MIDDLE DOT or asterisk, never a bare space
 
 factor          = unit-token [ exponent ]
 unit-token      = 1*( %x21-7E / non-ascii )    ; resolved against the registry, see 4
@@ -198,8 +198,8 @@ extension this format does not define.
 | Canonical | Also accepted |
 |---|---|
 | `±` | `+/-`, `+-` |
-| `·` between factors | `*`, one or more spaces |
-| `m·s^-2` | `m·s⁻²`, `m*s^-2`, `m s^-2` |
+| `·` between factors | `*` — whitespace around either is tolerated; a bare space never separates factors |
+| `m·s^-2` | `m·s⁻²`, `m*s^-2` |
 | `×10^3` | `×10³`, `x10^3`, `*10^3` |
 | `Ω` (U+03A9) | U+2126 OHM SIGN — normalisation reconciles them |
 | `µ` (U+00B5) | `μ` U+03BC — normalisation does *not*, so both are listed explicitly |

@@ -202,7 +202,7 @@ Estimates are focused person-days for one senior TypeScript developer, including
 - **Acceptance:** met. `tests/registry/specification.test.ts` parses `spec/README.md` and compares it with the registry in **both** directions — table rows, alias list, affine marker, SenML paragraph, percent reference, mass note, and the unit-factor examples of §3.2/3.3 — so neither document nor data file can move without the other. 137 tests pass with the spec present.
 - The upstream specification at [OpenChargingTechnology/Whitepapers/MetrologicalCBOR](https://github.com/OpenChargingTechnology/Whitepapers/tree/master/MetrologicalCBOR) already carries all four errata; `spec/` is now synced to that copy (revision 1.0, 2026-08-18) and the registry records which revision it was transcribed from. Nothing left to file upstream.
 - `spec/` is git-ignored, so a fresh checkout has none. `npm run fetch:spec` downloads it from the public whitepaper repository, and CI runs that before the tests — with `continue-on-error` so a network failure never blocks a pull request, and without it in the nightly workflow, so a persistent problem surfaces within a day. Absent the spec the suite skips (42 pass, 22 skip, 0 fail) rather than breaking.
-- *Still open:* the decoder questions A5/A6.
+- *Closed 2026-08-18:* the decoder questions A5/A6 were decided normatively upstream (specification §3.2: both rejected) — see Appendix A.
 
 ### WP2 — CBOR core (4–6 d) — **done 2026-08-18**
 
@@ -466,7 +466,7 @@ Total ≈ **24–36 focused person-days** (the table shows mid-range). Calendar 
 
 ## Appendix A — Spec errata found during planning
 
-**Status: closed.** A1–A4 were corrected locally on 2026-08-18, and the upstream specification (revision 1.0, 2026-08-18) carries the same corrections, so document and registry now agree. The table below records the pre-correction state for the history. A5 and A6 remain open — they are design decisions, not errata.
+**Status: closed.** A1–A4 were corrected locally on 2026-08-18, and the upstream specification (revision 1.0, 2026-08-18) carries the same corrections, so document and registry now agree. The table below records the pre-correction state for the history. A5 and A6, the two design decisions, were decided normatively upstream later the same day: both spellings are rejected.
 
 The §4 **table** and the §5/worked-example **byte encodings are internally consistent** — they are the ground truth the registry data (WP1) is built from. Four prose passages in [spec/README.md](spec/README.md) carried identifications from an apparent earlier numbering and contradicted that table:
 
@@ -477,9 +477,12 @@ The §4 **table** and the §5/worked-example **byte encodings are internally con
 | A3 | SenML paragraph | "this format's percent (36)" | percent = **6** (36 = Sv) |
 | A4 | Note on mass | "the gram (3)", "five kilograms … `(5, 3, 3)`" | gram = **16**, so `(5, 16, 3)` (3 = W) |
 
-Two decoder-side questions the spec leaves open (relevant to D6, WP4):
+Two decoder-side questions the spec left open (relevant to D6, WP4) —
+**both decided normatively upstream on 2026-08-18** (specification §3.2, via
+the cross-implementation conformance suite): decoders MUST reject both
+spellings. Strict mode already did; the questions are closed.
 
-- **A5** — May a decoder accept a one-element product-of-powers whose exponent is 1 (`[[5, 1]]` for volt)? The encoder MUST NOT write it; the decoder's duty is unstated. Plan: reject in strict mode, accept in lenient.
-- **A6** — Is a rational exponent with denominator 1 (`[2, 1]`) valid input, given "reduce to lowest terms" and the int form existing? Plan: normalise to the int form on decode, never emit, flag in strict mode.
+- **A5** — May a decoder accept a one-element product-of-powers whose exponent is 1 (`[[5, 1]]` for volt)? The encoder MUST NOT write it; the decoder's duty was unstated. *Decided: reject.*
+- **A6** — Is a rational exponent with denominator 1 (`[2, 1]`) valid input, given "reduce to lowest terms" and the int form existing? *Decided: reject — a rational exponent must be in lowest terms with a denominator greater than one, and decoders reject rather than reduce.*
 
 The same patch goes upstream in WP1 — before any identifier is frozen into `units.json`.

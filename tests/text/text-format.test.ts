@@ -324,7 +324,7 @@ describe('ASCII input and output', () => {
 
     it.each([
         ['9.81 m*s^-2',        `9.81 m${MIDDLE_DOT}s^-2`],
-        ['9.81 m s^-2',        `9.81 m${MIDDLE_DOT}s^-2`],
+        [`9.81 m ${MIDDLE_DOT} s^-2`, `9.81 m${MIDDLE_DOT}s^-2`],
         ['(230.00 +/-0.12) V', `(230.00 ${PLUS_MINUS}0.12) V`],
         ['(230.00 +-0.12) V',  `(230.00 ${PLUS_MINUS}0.12) V`],
         ['5x10^3 m2',          `5${TIMES_TEN_3} ${SQUARE_METER}`],
@@ -422,6 +422,7 @@ describe('what the parser refuses', () => {
         ['5 m^1/0',       'a zero denominator'],
         ['5.0mA',         'a missing space before the unit'],
         ['(5 ±1)A',  'a missing space after the bracket'],
+        ['9.81 m s^-2',   'a bare space as a factor separator'],
     ])('rejects %s (%s)', text => {
         expect(codeOf(() => parseMetrologicalValue(text))).not.toBe('no throw');
     });

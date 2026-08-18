@@ -52,6 +52,10 @@ implementations disagreed. This release implements those decisions.
 - A unit exponent of zero (`m^0`, `[[15, 0]]`) is rejected.
 - A prefix no longer folds onto a symbol that carries a power: `km²` is
   rejected instead of being read as 10³ m².
+- A bare space no longer separates the factors of a product: the space's one
+  job is separating the number from its unit, and `5 m s` stays prose
+  (metrological-text §2.6 — the last open tolerance question, decided).
+  Whitespace *around* `·` and `*` remains tolerated.
 
 ### Fixed
 

@@ -68,8 +68,13 @@ const CARET_EXPONENT = /\^\s*([+-]?\d+)(?:\s*\/\s*(\d+))?$/;
 
 const SUPERSCRIPT_EXPONENT = new RegExp(`[${SUPERSCRIPT_CHARACTERS}]+$`);
 
-/** What separates the factors of a product of powers. */
-const FACTOR_SEPARATOR = /[\u00B7*\s]+/;
+/**
+ * What separates the factors of a product of powers: the middle dot or the
+ * asterisk, with whitespace around either tolerated. A bare space is never a
+ * separator \u2014 its one job is separating the number from its unit, and
+ * "5 m s" must stay prose (metrological-text \u00A72.6).
+ */
+const FACTOR_SEPARATOR = /\s*[\u00B7*]\s*/;
 
 const DISTRIBUTIONS = new Set<UncertaintyDistribution>([
     'normal', 'rectangular', 'triangular', 'u-shaped', 'student-t',
