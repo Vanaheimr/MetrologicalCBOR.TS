@@ -43,15 +43,27 @@ const DOCUMENTS = [
     'README.md',
     'IANA-registration.md',
     'tag-44252-signed-example.md',
+    'metrological-text.md',
+] as const;
+
+// The machine-readable conformance annex: golden encodings, must-reject
+// inputs, text renderings and the JSON conversion. `tests/spec-vectors.test.ts`
+// executes every normative entry where these are present.
+const VECTORS = [
+    'test-vectors/values.json',
+    'test-vectors/values-invalid.json',
+    'test-vectors/documents.json',
+    'test-vectors/json-to-cbor.json',
 ] as const;
 
 async function main(): Promise<number> {
 
     mkdirSync(TARGET, { recursive: true });
+    mkdirSync(join(TARGET, 'test-vectors'), { recursive: true });
 
     console.log(`Fetching the specification from\n  ${BASE}\n`);
 
-    for (const document of DOCUMENTS) {
+    for (const document of [...DOCUMENTS, ...VECTORS]) {
 
         const url = `${BASE}/${document}`;
 
@@ -71,7 +83,21 @@ async function main(): Promise<number> {
 
         const text = await response.text();
 
-        if (!text.startsWith('#')) {
+        if (document.endsWith('.json')) {
+
+            // A vector file is a JSON object naming its suite.
+            try {
+                const parsed = JSON.parse(text) as { suite?: unknown };
+                if (typeof parsed.suite !== 'string')
+                    throw new Error('no "suite" field');
+            }
+            catch (error) {
+                console.error(`  ${document}: does not look like a vector file (${error instanceof Error ? error.message : String(error)})`);
+                return 1;
+            }
+
+        }
+        else if (!text.startsWith('#')) {
             console.error(`  ${document}: does not look like the expected Markdown document`);
             return 1;
         }
@@ -80,7 +106,7 @@ async function main(): Promise<number> {
         // is byte-identical to the document the registry is compared against.
         writeFileSync(join(TARGET, document), text, 'utf8');
 
-        console.log(`  ${document.padEnd(30)} ${String(text.length).padStart(6)} characters`);
+        console.log(`  ${document.padEnd(34)} ${String(text.length).padStart(6)} characters`);
 
     }
 

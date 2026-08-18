@@ -27,6 +27,13 @@ implementations disagreed. This release implements those decisions.
   sees a digit), so the tree-based `mcborToJson`/`jsonToMcbor` remain as the
   documented lossy convenience.
 - `dist=t` is accepted for `dist=student-t` on input.
+- **The specification's test vectors run as part of this suite.** The
+  specification carries a machine-readable conformance annex
+  (`test-vectors/`) now; `npm run fetch:spec` fetches it together with the
+  documents, and `tests/spec-vectors.test.ts` executes every normative entry
+  — golden encodings, must-reject inputs, text renderings and the exact JSON
+  conversion. Like the other specification-bound suites it skips where the
+  annex is absent.
 
 ### Changed
 
