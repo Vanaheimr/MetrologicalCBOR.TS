@@ -65,6 +65,7 @@
     "check:registry": "tsx scripts/generate-registry.ts --check",
     "fetch:spec": "tsx scripts/fetch-spec.ts",
     "typecheck": "tsc --noEmit",
+    "typecheck:examples": "tsc --noEmit -p examples/tsconfig.json",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "vitest run",

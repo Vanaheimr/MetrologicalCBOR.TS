@@ -1,0 +1,11 @@
+{
+  "//": "The examples are a package of their own, because one of them needs a cryptography library and the library under test has no dependencies and must keep none. That means they cannot be type-checked by the root configuration: a root `npm ci` does not install @noble/curves, and tsc would report a module it was never going to find. Checked here instead, by `npm run typecheck:examples`, after `npm install --prefix examples`.",
+
+  "extends": "../tsconfig.json",
+
+  "compilerOptions": {
+    "noEmit": true
+  },
+
+  "include": ["**/*.ts", "../src/**/*.ts"]
+}

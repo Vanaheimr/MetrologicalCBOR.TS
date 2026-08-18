@@ -28,7 +28,15 @@ runs itself.
 
 ```bash
 npm run verify
+npm install --prefix examples && npm run typecheck:examples
 ```
+
+The second line is not optional and not part of `verify`: the examples are a
+package of their own, because one of them needs a cryptography library that the
+library under test does not have and must not acquire. The root type check
+therefore cannot see them, and the first release attempt failed on exactly that
+— the examples type-checked on the machine that had installed their dependency
+and nowhere else.
 
 Then set the version and write the changelog entry — the version in
 `package.json` and the heading in `CHANGELOG.md` must agree, because the

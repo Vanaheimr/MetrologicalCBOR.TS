@@ -53,6 +53,13 @@ freeze declared in 0.9.0 holds.
   about the build artefact and would otherwise have skipped in CI.
 - Summaries for the nine option interfaces that had documented members and no
   documented whole.
+- The root type check tried to check `examples/`, which imports a dependency the
+  root package deliberately does not have — so `npm run verify` passed only on a
+  machine that had run `npm install --prefix examples`, and failed everywhere
+  else. The examples are a package of their own now, with their own
+  `tsconfig.json` and `npm run typecheck:examples`, run by the CI job that
+  installs them. Found by the release workflow on the first attempt, which is
+  what a release workflow is for.
 
 ### Known
 

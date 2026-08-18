@@ -29,5 +29,7 @@
 
     "types": ["node"]
   },
-  "include": ["src", "tests", "scripts", "examples", "*.config.ts"]
+  "//": "examples/ is deliberately absent: it is a package of its own with a dependency the library does not have, so a root `npm ci` cannot resolve it. examples/tsconfig.json checks it where that dependency lives — `npm run typecheck:examples`, after `npm install --prefix examples`.",
+
+  "include": ["src", "tests", "scripts", "*.config.ts"]
 }

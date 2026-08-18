@@ -97,6 +97,12 @@ jobs:
         # instead of skipping.
         run: npm install --prefix examples
 
+      - name: Type check the examples
+        # Not part of `npm run verify`: the root configuration cannot resolve a
+        # dependency the root package does not have, and a contributor who has
+        # not installed it must still be able to verify the library.
+        run: npm run typecheck:examples
+
       - name: Run every example
         run: npx vitest run tests/examples.test.ts
 
