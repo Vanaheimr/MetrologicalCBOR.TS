@@ -93,12 +93,15 @@ export function distributionById(id: number): UncertaintyDistribution {
 
 
 /**
- * How the uncertainty was written.
+ * How an uncertainty is written on the wire, which follows from what it says
+ * rather than being a choice.
  *
- * A bare number is the compact and by far the most common form, and states a
- * standard uncertainty. A map states more. Where only a magnitude is present
- * the two say the same thing, and the form is kept so that a document can be
- * re-serialised as it arrived.
+ * A bare number is the compact form and states a standard uncertainty; a map
+ * states more. Where only a magnitude is present the two say exactly the same
+ * thing, so there is nothing to choose between them: Section 6 requires the
+ * encoding to be a function of the value alone, and the compact form is the
+ * one. {@link uncertaintyForm} derives it, the encoder follows it, and a
+ * strict decoder rejects the map that says no more than a bare number would.
  */
 export type UncertaintyForm = 'bare' | 'map';
 
@@ -123,12 +126,6 @@ export interface UncertaintyOptions {
 
     /** The effective degrees of freedom, positive. */
     readonly degreesOfFreedom?: DecimalNumber | undefined;
-
-    /**
-     * How it is to be written. Defaults to the compact `bare` where nothing
-     * but a magnitude is stated, and to `map` otherwise.
-     */
-    readonly form?: UncertaintyForm;
 
 }
 
@@ -155,9 +152,6 @@ export interface Uncertainty {
 
     /** The effective degrees of freedom, or `undefined` where they were not stated. */
     readonly degreesOfFreedom: DecimalNumber | undefined;
-
-    /** How it is written on the wire. */
-    readonly form: UncertaintyForm;
 
 }
 
@@ -197,27 +191,35 @@ export function uncertainty(options: UncertaintyOptions): Uncertainty {
                              `Effective degrees of freedom of ${formatDecimal(degreesOfFreedom)} are not positive.`,
                              { clause: '3.4' });
 
-    const statesMoreThanMagnitude = coverageFactor      !== undefined ||
-                                    coverageProbability !== undefined ||
-                                    options.distribution !== undefined ||
-                                    degreesOfFreedom    !== undefined;
-
-    const form = options.form ?? (statesMoreThanMagnitude ? 'map' : 'bare');
-
-    if (form === 'bare' && statesMoreThanMagnitude)
-        throw new ValueError('ERR_UNCERTAINTY_NO_MAGNITUDE',
-                             'An uncertainty that states more than a magnitude cannot be written as a bare number.',
-                             { clause: '3.4' });
-
     return {
         magnitude,
         coverageFactor,
         coverageProbability,
         distribution: options.distribution,
         degreesOfFreedom,
-        form,
     };
 
+}
+
+
+/**
+ * Whether the uncertainty says anything a bare magnitude could not.
+ */
+export function statesMoreThanMagnitude(value: Uncertainty): boolean {
+
+    return value.coverageFactor      !== undefined ||
+           value.coverageProbability !== undefined ||
+           value.distribution        !== undefined ||
+           value.degreesOfFreedom    !== undefined;
+
+}
+
+
+/**
+ * The form the uncertainty is written in, which follows from what it states.
+ */
+export function uncertaintyForm(value: Uncertainty): UncertaintyForm {
+    return statesMoreThanMagnitude(value) ? 'map' : 'bare';
 }
 
 
@@ -267,8 +269,7 @@ export function sameUncertaintyRepresentation(left:  Uncertainty | undefined,
             : a.kind === b.kind && compareDecimal(a, b) === 0 &&
               formatDecimal(a) === formatDecimal(b);
 
-    return left.form === right.form &&
-           left.distribution === right.distribution &&
+    return left.distribution === right.distribution &&
            sameNumber(left.magnitude,           right.magnitude) &&
            sameNumber(left.coverageFactor,      right.coverageFactor) &&
            sameNumber(left.coverageProbability, right.coverageProbability) &&

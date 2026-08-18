@@ -40,6 +40,8 @@ export * from './model/index.js';
 
 export * from './codec/index.js';
 
+export * from './text/index.js';
+
 export * as cbor from './cbor/index.js';
 
 export {

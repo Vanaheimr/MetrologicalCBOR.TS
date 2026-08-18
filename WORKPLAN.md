@@ -263,12 +263,31 @@ Estimates are focused person-days for one senior TypeScript developer, including
 - The float ban fired inside `src/codec/` on three bigint-to-number conversions. Each is exact — every one is range-checked first — but the rule was right to ask. They are now one audited helper with a single documented exception, rather than three scattered ones.
 - Four of the hand-written rejection vectors were wrong on the first run, and the codec was right each time: two carried a trailing byte, one was truncated, and `[-1, 3]` is a perfectly good exponent rather than the zero numerator it was meant to be.
 
-### WP5 — Text format: grammar, renderer, parser (5–7 d) — *largest single risk, start early*
+### WP5 — Text format: grammar, renderer, parser (5–7 d) — **done 2026-08-18, released as v0.2.0**
 
 - Write [docs/text-format.md](docs/text-format.md): ABNF, normalization (NFC, µ/Ω homoglyphs, superscripts ⇄ carets), tokenization rules (unit-symbol-first, then prefix split), prefix-folding rule and ×10ⁿ fallback, uncertainty extension tokens, dimensionless rendering (D4). Review with maintainer, then freeze.
 - Renderer (canonical) + parser (tolerant input per grammar), both float-free.
 - Fixture table: every §5 "Reading" string round-trips string → value → canonical bytes → string; ambiguity fixtures (`cd`, `kg`, `min`, `mm`, `mT`, `m°C`, `das`, `t` vs `T`, `dB` caveat); Unicode fixtures (both micros, both ohms, `‰`, `°`).
-- **Acceptance:** grammar doc frozen; lossless round-trip property test (arbitrary valid value → string → identical canonical bytes) passes 10⁵ cases.
+- **Acceptance:** met. [docs/text-format.md](docs/text-format.md) is written and frozen; the lossless round-trip passes 10⁵ generated cases per run, and 2×10⁶ in a one-off sweep. 950 tests overall.
+
+**Findings — the property test earned its place three times over**
+
+Each of these was found by a generated reading, not by review, and each was a *renderer* producing text the parser then read as something else:
+
+- **`m³` with exponent −1 rendered as `m³⁻¹`**, whose two superscript runs merge into `3-1`. Worse, `Number.parseInt('3-1')` returns 3 without complaint, so the reading came back as the metre cubed. The superscript digits are now validated before being parsed, and a symbol that already ends in a superscript takes the caret form.
+- **The day at prefix centi folded into `cd`**, which is the candela. The renderer now asks the parser's own resolver whether its output reads back as the same unit before folding anything — checking rather than reasoning about which collisions exist.
+- **The metre at the third power rendered as `m³`**, which is the *registered* cubic metre and a different unit. Symbol plus superscript is now checked against the registry, and gives way to `m^3`.
+
+The first of these appeared only after 100 000 cases. In response the suite gained a **deterministic** sweep — every unit against every prefix, every whole power and a set of rational ones, in both spellings — because these collisions are structured rather than random, and a defect found one run in fifty is a defect that ships.
+
+**Design decisions taken here**
+
+- **The uncertainty lost its `form` field.** A map holding only a magnitude says exactly what a bare number says; §6 does not allow one uncertainty two encodings, so the form is derived rather than chosen and a strict decoder rejects the redundant map. The text format is what surfaced this: it had no way to spell the difference, which was the clue that there was no difference to spell.
+- **`5e2` and `500` are different readings**, and the text says so. A decimal fraction with a non-negative exponent takes scientific form, because the positional spelling would read back as a plain integer and claim a finer resolution than the instrument reported.
+- **A prefix that cannot be folded becomes `×10ⁿ`**, which is a part of the reading rather than of the number — `5×10³ m²` and `5e3 m²` are different readings and both are expressible.
+- **`ν=` is accepted but `nu=` is written**, one homoglyph fewer than the plan proposed.
+
+*Deviation from plan:* the renderer and parser are free functions rather than `MetrologicalValue.toString()` / `.parse()`, for the same layering reason as WP4 — a model that formats itself has to know the format.
 
 ### WP6 — JSON document conversion (2–3 d)
 
@@ -348,7 +367,7 @@ Versioning: SemVer; 0.x during WP4–WP7 (published early — real feedback beat
 | ~~M0~~ | ~~WP0~~ | **done 2026-08-18** — verify green, pack verified in ESM and CJS | 2 d |
 | ~~M1~~ | ~~WP1 + WP2~~ | **done 2026-08-18** — registry frozen, errata fixed, CBOR core round-trips the worked example byte-exact | 9 d |
 | ~~M2~~ | ~~WP3 + WP4~~ → **v0.1.0** | **done 2026-08-18** — all §5 vectors byte-exact in both directions | 15 d |
-| M3 | WP5 → **v0.2.0** | grammar frozen, lossless text round-trip | 21 d |
+| ~~M3~~ | ~~WP5~~ → **v0.2.0** | **done 2026-08-18** — grammar frozen, lossless text round-trip | 21 d |
 | M4 | WP6 → **v0.3.0** | document JSON round-trip | 24 d |
 | M5 | WP7 → **v0.9.0** | conformance matrix complete, fuzzing in nightly | 28 d |
 | M6 | WP8 → **v1.0.0** | published with provenance; IANA recorded | 31 d |

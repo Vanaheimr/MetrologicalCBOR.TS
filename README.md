@@ -21,10 +21,11 @@ never heard of the tag still sees a well-formed array of standard numbers.
 
 ## Status
 
-**0.1.0 — the codec works.** All ten examples of specification Section 5 encode
-and decode byte for byte, in both directions. The text format and the
-document-level JSON conversion are still to come. See
-[WORKPLAN.md](WORKPLAN.md) for the plan and its work packages.
+**0.2.0 — the codec and the text format work.** All ten examples of
+specification Section 5 encode and decode byte for byte, and a reading survives
+being written as text and read back. The document-level JSON conversion is
+still to come. See [WORKPLAN.md](WORKPLAN.md) for the plan and its work
+packages.
 
 | Work package | State |
 |---|---|
@@ -33,8 +34,8 @@ document-level JSON conversion are still to come. See
 | WP2 — Minimal deterministic CBOR core | done |
 | WP3 — Domain model and validation | done |
 | WP4 — Tag 44252 codec | done — **v0.1.0** |
-| WP5 — Text format: grammar, renderer, parser | next |
-| WP6 — Document-level CBOR/JSON conversion | planned |
+| WP5 — Text format: grammar, renderer, parser | done — **v0.2.0** |
+| WP6 — Document-level CBOR/JSON conversion | next |
 | WP7 — Hardening and conformance | planned |
 | WP8 — Documentation and release | planned |
 
@@ -84,6 +85,28 @@ encoder would have produced are rejected, which is what data that was signed
 requires. `{ strict: false }` accepts those spellings and normalises them.
 `{ units: 'preserve' }` on the way out reproduces a symbolic unit as it
 arrived, so a signature over a document this library did not write survives.
+
+## A reading as text
+
+```ts
+import { formatMetrologicalValue, parseMetrologicalValue } from '@vanaheimr/metrological-cbor';
+
+formatMetrologicalValue(reading);            // '(230.00 ±0.12) V, k=2'
+formatMetrologicalValue(reading, { ascii: true });  // '(230.00 +/-0.12) V, k=2'
+
+parseMetrologicalValue('9.81 m·s⁻²');        // and 'm*s^-2', and 'm s^-2'
+```
+
+This is a second encoding rather than a pretty-printing: what is written reads
+back to the same bytes, which is what will let a whole document travel through
+JSON with every measurement intact. The grammar is
+[docs/text-format.md](docs/text-format.md).
+
+Two of its rules exist because a generated reading found them missing. A prefix
+is folded into a symbol only where the result reads back as the same unit —
+a centi-day would fold into `cd`, which is the candela — and a superscript is
+only written where symbol and exponent do not together spell some other symbol:
+the metre cubed is `m^3`, because `m³` is the registered cubic metre.
 
 ## What else works today
 

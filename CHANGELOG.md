@@ -10,6 +10,37 @@ on the IANA registration of tag 44252 — see [WORKPLAN.md](WORKPLAN.md), WP8.
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-08-18
+
+The text format: a reading as one line of text, and back again without losing
+anything. `docs/text-format.md` is its grammar, frozen with this release.
+
+### Added
+
+- `formatMetrologicalValue` and `parseMetrologicalValue`, and the grammar they
+  implement (WP5). Text is a second encoding of a reading rather than a
+  rendering of one: what is written reads back to the same canonical bytes.
+- The renderer checks its own output before folding a prefix into a symbol or
+  writing a superscript, because both can spell a different unit. The centi-day
+  would fold into `cd`, which is the candela, and the metre cubed would be
+  written `m³`, which is the registered cubic metre. Both now take the
+  unambiguous form instead.
+- The parser resolves a token as a whole symbol before splitting a prefix off
+  it, which is what makes `cd` the candela, `min` the minute and `das` a
+  decasecond. Only the leading factor of a product may carry a prefix, since a
+  prefix applies to the quantity as a whole.
+- ASCII input and output throughout: `+/-`, `*`, `^2`, `x10^3`. Both spellings
+  of micro and of the ohm are accepted on input.
+
+### Changed
+
+- An uncertainty no longer has a `form` to choose. A map holding nothing but a
+  magnitude says exactly what a bare number says, and Section 6 does not allow
+  one uncertainty two encodings, so the form follows from what is stated:
+  `uncertaintyForm` derives it, the encoder follows it, and a strict decoder
+  rejects the redundant map (`ERR_UNCERTAINTY_REDUNDANT_MAP`). The ambiguity
+  surfaced because the text format could not express it.
+
 ## [0.1.0] — 2026-08-18
 
 The first version that reads and writes CBOR tag 44252. All ten examples of

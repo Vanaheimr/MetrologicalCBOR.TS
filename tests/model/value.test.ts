@@ -29,7 +29,7 @@ import { Units }                from '../../src/registry/units.generated.js';
 import { decimal, integer }     from '../../src/model/decimal.js';
 import { SIPrefix }             from '../../src/model/prefix.js';
 import { factor, unitById, unitBySymbol, unitExponent, unitProduct } from '../../src/model/unit.js';
-import { uncertainty }          from '../../src/model/uncertainty.js';
+import { uncertainty, uncertaintyForm }          from '../../src/model/uncertainty.js';
 import {
     MetrologicalValue, compareQuantity, metrologicalValue, sameQuantity,
 } from '../../src/model/value.js';
@@ -122,7 +122,7 @@ describe('construction', () => {
         });
 
         expect(voltage.formatValue()).toBe('230.00');
-        expect(voltage.uncertainty?.form).toBe('map');
+        expect(uncertaintyForm(voltage.uncertainty!)).toBe('map');
 
     });
 

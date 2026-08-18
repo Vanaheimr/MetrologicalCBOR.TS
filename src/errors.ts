@@ -95,6 +95,9 @@ export type McborErrorCode =
     /** A decimal string that is not a decimal number. */
     | 'ERR_VALUE_SYNTAX'
 
+    /** Text that is not a reading in the format this library writes. */
+    | 'ERR_TEXT_SYNTAX'
+
     /** A division was asked for without stating the scale to round it to. */
     | 'ERR_VALUE_INEXACT'
 
@@ -136,6 +139,15 @@ export type McborErrorCode =
 
     /** An uncertainty map holds a key the specification does not define. Section 3.4. */
     | 'ERR_UNCERTAINTY_UNKNOWN_KEY'
+
+    /**
+     * An uncertainty map that states nothing a bare number could not.
+     *
+     * Section 3.4 calls the bare number the compact form, and Section 6
+     * requires the encoding to be a function of the value alone — which two
+     * spellings of one uncertainty would not be.
+     */
+    | 'ERR_UNCERTAINTY_REDUNDANT_MAP'
 
     /** The data item is not tagged as a metrological value. Section 3. */
     | 'ERR_TAG_MISMATCH'

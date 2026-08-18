@@ -28,7 +28,7 @@ import { describe, expect, it } from 'vitest';
 
 import { decimal, formatDecimal, integer } from '../../src/model/decimal.js';
 import {
-    DISTRIBUTION_IDS, distributionById, effectiveCoverageFactor,
+    DISTRIBUTION_IDS, distributionById, effectiveCoverageFactor, statesMoreThanMagnitude, uncertaintyForm,
     sameUncertaintyRepresentation, standardUncertainty, uncertainty,
 } from '../../src/model/uncertainty.js';
 import { codeOf }           from '../support/errors.js';
@@ -44,7 +44,7 @@ describe('construction', () => {
 
         expect(formatDecimal(u.magnitude)).toBe('0.02');
         expect(u.coverageFactor).toBeUndefined();
-        expect(u.form).toBe('bare');
+        expect(uncertaintyForm(u)).toBe('bare');
         expect(formatDecimal(effectiveCoverageFactor(u))).toBe('1');
 
     });
@@ -63,7 +63,7 @@ describe('construction', () => {
         expect(formatDecimal(u.coverageFactor!)).toBe('2');
         expect(formatDecimal(u.coverageProbability!)).toBe('0.95');
         expect(u.distribution).toBe('normal');
-        expect(u.form).toBe('map');
+        expect(uncertaintyForm(u)).toBe('map');
 
     });
 
@@ -78,19 +78,35 @@ describe('construction', () => {
 
     it('writes a map by itself as soon as anything beyond a magnitude is stated', () => {
 
-        expect(uncertainty({ magnitude: integer(1) }).form).toBe('bare');
-        expect(uncertainty({ magnitude: integer(1), coverageFactor: integer(2) }).form).toBe('map');
-        expect(uncertainty({ magnitude: integer(1), distribution: 'normal' }).form).toBe('map');
+        expect(uncertaintyForm(uncertainty({ magnitude: integer(1) }))).toBe('bare');
+        expect(uncertaintyForm(uncertainty({ magnitude: integer(1), coverageFactor: integer(2) }))).toBe('map');
+        expect(uncertaintyForm(uncertainty({ magnitude: integer(1), distribution: 'normal' }))).toBe('map');
 
     });
 
-    it('allows a map form even where a bare number would do', () => {
-        expect(uncertainty({ magnitude: integer(1), form: 'map' }).form).toBe('map');
+    it('offers no choice of form, because there is nothing to choose', () => {
+
+        // A map holding only a magnitude says exactly what a bare number says.
+        // Section 6 requires the encoding to be a function of the value alone,
+        // so the compact form is not a preference but the answer.
+        expect(statesMoreThanMagnitude(uncertainty({ magnitude: integer(1) }))).toBe(false);
+        expect(statesMoreThanMagnitude(uncertainty({ magnitude: integer(1), coverageFactor: integer(2) }))).toBe(true);
+
     });
 
-    it('refuses a bare form for something a bare number cannot say', () => {
-        expect(codeOf(() => uncertainty({ magnitude: integer(1), coverageFactor: integer(2), form: 'bare' })))
-            .toBe('ERR_UNCERTAINTY_NO_MAGNITUDE');
+    it('treats an explicit undefined as not stated', () => {
+
+        // Which is what a decoder holding an optional field has in hand.
+        const bare = uncertainty({
+            magnitude:           integer(1),
+            coverageFactor:      undefined,
+            coverageProbability: undefined,
+            distribution:        undefined,
+            degreesOfFreedom:    undefined,
+        });
+
+        expect(uncertaintyForm(bare)).toBe('bare');
+
     });
 
 });
@@ -239,12 +255,15 @@ describe('comparison', () => {
 
     });
 
-    it('distinguishes the bare form from the map form', () => {
+    it('finds two uncertainties that state the same thing equal', () => {
 
+        // There is no longer a form to differ in: what an uncertainty says
+        // determines how it is written, so saying the same thing is being the
+        // same thing.
         expect(sameUncertaintyRepresentation(
-            uncertainty({ magnitude: integer(1), form: 'bare' }),
-            uncertainty({ magnitude: integer(1), form: 'map' }),
-        )).toBe(false);
+            uncertainty({ magnitude: integer(1) }),
+            uncertainty({ magnitude: integer(1), coverageFactor: undefined }),
+        )).toBe(true);
 
     });
 

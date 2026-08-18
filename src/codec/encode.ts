@@ -36,7 +36,7 @@ import type { CborEntry, CborValue } from '../cbor/types.js';
 import { exponentOf, mantissaOf }  from '../model/decimal.js';
 import type { DecimalNumber }      from '../model/decimal.js';
 import { SIPrefix }                from '../model/prefix.js';
-import { DISTRIBUTION_IDS }        from '../model/uncertainty.js';
+import { DISTRIBUTION_IDS, statesMoreThanMagnitude } from '../model/uncertainty.js';
 import type { Uncertainty }        from '../model/uncertainty.js';
 import type { NamedUnit, UnitExponent, UnitRef } from '../model/unit.js';
 import type { MetrologicalValue }  from '../model/value.js';
@@ -171,8 +171,9 @@ function writeExponent(exponent: UnitExponent): CborValue {
 function writeUncertainty(value: Uncertainty): CborValue {
 
     // A bare number is the compact form and says everything a magnitude alone
-    // can say. Anything more needs the map.
-    if (value.form === 'bare')
+    // can say, so it is the encoding wherever nothing more is stated. Only
+    // something the bare form cannot express justifies the map.
+    if (!statesMoreThanMagnitude(value))
         return writeNumber(value.magnitude);
 
     const entries: CborEntry[] = [

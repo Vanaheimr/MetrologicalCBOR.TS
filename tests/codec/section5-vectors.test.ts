@@ -37,7 +37,7 @@ import { diagnostic }               from '../../src/cbor/diagnostic.js';
 import { decimal, formatDecimal, integer } from '../../src/model/decimal.js';
 import { SIPrefix }                 from '../../src/model/prefix.js';
 import { factor, unitById, unitBySymbol, unitExponent, unitProduct } from '../../src/model/unit.js';
-import { uncertainty }              from '../../src/model/uncertainty.js';
+import { uncertainty, uncertaintyForm }              from '../../src/model/uncertainty.js';
 import { metrologicalValue }        from '../../src/model/value.js';
 import type { MetrologicalValue }   from '../../src/model/value.js';
 import { Units }                    from '../../src/registry/units.generated.js';
@@ -266,7 +266,7 @@ describe('what the vectors say about the readings', () => {
         expect(formatDecimal(value.value)).toBe('230.00');
         expect(formatDecimal(value.uncertainty!.magnitude)).toBe('0.12');
         expect(formatDecimal(value.uncertainty!.coverageFactor!)).toBe('2');
-        expect(value.uncertainty!.form).toBe('map');
+        expect(uncertaintyForm(value.uncertainty!)).toBe('map');
 
     });
 

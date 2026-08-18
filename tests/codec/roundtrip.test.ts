@@ -107,7 +107,7 @@ const anyUncertainty: fc.Arbitrary<Uncertainty | undefined> = fc.oneof(
         coverageProbability: fc.option(fc.integer({ min: 1, max: 100 }).map(p => decimal(p, -2)),  { nil: undefined }),
         distribution:        fc.option(fc.constantFrom('normal', 'rectangular', 'triangular', 'u-shaped', 'student-t' as const), { nil: undefined }),
         degreesOfFreedom:    fc.option(fc.integer({ min: 1, max: 200 }).map(v => integer(v)),      { nil: undefined }),
-    }).map(options => uncertainty({ ...options, form: 'map' })),
+    }).map(options => uncertainty({ ...options })),
 );
 
 const anyValue: fc.Arbitrary<MetrologicalValue> = fc.record({

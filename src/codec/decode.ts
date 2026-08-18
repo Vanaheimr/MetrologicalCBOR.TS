@@ -169,7 +169,7 @@ export function metrologicalValueFromCbor(item:     CborValue,
         value,
         unit,
         prefix,
-        uncertainty: hasUncertainty ? readUncertainty(items[3]!) : undefined,
+        uncertainty: hasUncertainty ? readUncertainty(items[3]!, strict) : undefined,
     });
 
 }
@@ -386,10 +386,10 @@ function readPrefix(item: CborValue): number {
 // The uncertainty
 // ---------------------------------------------------------------------------
 
-function readUncertainty(item: CborValue): Uncertainty {
+function readUncertainty(item: CborValue, strict: boolean): Uncertainty {
 
     if (item.type !== 'map')
-        return uncertainty({ magnitude: readNumber(item, 'The measurement uncertainty'), form: 'bare' });
+        return uncertainty({ magnitude: readNumber(item, 'The measurement uncertainty') });
 
     let magnitude:           DecimalNumber | undefined;
     let coverageFactor:      DecimalNumber | undefined;
@@ -447,13 +447,19 @@ function readUncertainty(item: CborValue): Uncertainty {
                              'An uncertainty map has no magnitude, which is the one required key.',
                              { clause: '3.4' });
 
+    // A map holding nothing but a magnitude says exactly what a bare number
+    // says, and Section 6 does not allow one uncertainty two encodings.
+    if (strict && item.entries.length === 1)
+        throw new ValueError('ERR_UNCERTAINTY_REDUNDANT_MAP',
+                             'An uncertainty map states nothing a bare number could not, which gives the same uncertainty two encodings.',
+                             { clause: '6' });
+
     return uncertainty({
         magnitude,
         coverageFactor,
         coverageProbability,
         distribution,
         degreesOfFreedom,
-        form: 'map',
     });
 
 }
