@@ -244,11 +244,24 @@ Estimates are focused person-days for one senior TypeScript developer, including
 - **`scaleOf` returned `-0` for an integer**, since negating a zero exponent produces it. `-0 === 0` holds but `Object.is` distinguishes them, so it leaked into a test and would have leaked into any code keying on the scale. Guarded.
 - Rounding was worth testing in both directions: `0.25` at scale 1 is `0.2` under half-even and `0.3` under half-up, and a negative quotient rounds away from zero under half-up but toward it under truncate. All four cases are pinned.
 
-### WP4 — Tag 44252 codec (2–3 d)
+### WP4 — Tag 44252 codec (2–3 d) — **done 2026-08-18, released as v0.1.0**
 
 - Decode: tag head, arity 2–4, positional fields, strict/lenient modes, limits plumbed through.
 - Encode: canonical and preserve modes (D6); prefix-explicit-when-uncertainty rule; named-unit-never-one-element-array rule.
-- **Acceptance:** **all ten §5 vectors byte-exact in both directions**, including the symbolic-unit and rational-exponent rows; the worked example's two `energy` members decode to the documented values (1234.567 kWh, k=2, p=0.95, normal); preserve-mode round-trip byte-identical on every vector; negative corpus (floats, bigfloat, arity 1/5, prefix 4, unit 0, unit 70000, distribution 0, negative uncertainty, unreduced exponents, …) fully red.
+- **Acceptance:** met, all of it. The ten §5 vectors are byte-exact in both directions, symbolic-unit and rational-exponent rows included, and a test parses §5 out of the specification and checks that the table in the suite *is* the table in the document. The worked example's two `energy` members decode to 1234.567 kWh and 1259.869 kWh with k=2, p=0.95, normal, and yield the billed 25.302 kWh in exact integers. The negative corpus — 40 encodings covering every MUST of §§3 to 3.4 — is red in both modes. 872 tests overall, 40 000 property-based cases, coverage 97.4 % of statements and 96.6 % of branches.
+
+**Design decisions taken here**
+
+- **A5 and A6, as the maintainer decided.** A single named unit written as a one-element product is rejected in strict mode and read as the named unit in lenient mode; a rational exponent is reduced on decoding, so `[2, 1]` is the integer 2 and `[-2, 4]` is `[-1, 2]` in both modes.
+- **A prefix of 0 written where nothing follows it is rejected in strict mode** (`ERR_PREFIX_REDUNDANT`). The specification does not forbid it in words, but §6 requires the encoding to be a function of the reading alone, and `[v, u]` and `[v, u, 0]` would be two encodings of one reading. The symbolic unit is treated differently — §3.2 blesses it explicitly ("decoders MUST accept both"), so strict mode accepts it and `units: 'preserve'` reproduces it.
+- **The reading itself is never normalised.** "Encoders SHOULD write integral readings as plain integers" is advice to an instrument writing down what it measured, not licence to rewrite a reading that arrived as `4([0, 5])`. The decimal scale is the datum.
+- **An unknown key in an uncertainty map is rejected**, not ignored. Passing on an uncertainty this library only partly understands would be claiming to understand all of it. The cost is that a future specification version needs a new library version, which for legal metrology is the right trade.
+- **The codec functions are free rather than methods** on `MetrologicalValue`, which keeps the model free of any knowledge of its encoding. This departs from the API sketch in §4 of this plan: `v.encode()` would make the model import the codec that imports the model.
+
+**Findings**
+
+- The float ban fired inside `src/codec/` on three bigint-to-number conversions. Each is exact — every one is range-checked first — but the rule was right to ask. They are now one audited helper with a single documented exception, rather than three scattered ones.
+- Four of the hand-written rejection vectors were wrong on the first run, and the codec was right each time: two carried a trailing byte, one was truncated, and `[-1, 3]` is a perfectly good exponent rather than the zero numerator it was meant to be.
 
 ### WP5 — Text format: grammar, renderer, parser (5–7 d) — *largest single risk, start early*
 
@@ -334,7 +347,7 @@ Versioning: SemVer; 0.x during WP4–WP7 (published early — real feedback beat
 |---|---|---|---|
 | ~~M0~~ | ~~WP0~~ | **done 2026-08-18** — verify green, pack verified in ESM and CJS | 2 d |
 | ~~M1~~ | ~~WP1 + WP2~~ | **done 2026-08-18** — registry frozen, errata fixed, CBOR core round-trips the worked example byte-exact | 9 d |
-| M2 | WP3 + WP4 → **v0.1.0** | all §5 vectors byte-exact | 15 d |
+| ~~M2~~ | ~~WP3 + WP4~~ → **v0.1.0** | **done 2026-08-18** — all §5 vectors byte-exact in both directions | 15 d |
 | M3 | WP5 → **v0.2.0** | grammar frozen, lossless text round-trip | 21 d |
 | M4 | WP6 → **v0.3.0** | document JSON round-trip | 24 d |
 | M5 | WP7 → **v0.9.0** | conformance matrix complete, fuzzing in nightly | 28 d |

@@ -132,7 +132,22 @@ export type McborErrorCode =
     | 'ERR_UNCERTAINTY_DISTRIBUTION'
 
     /** Effective degrees of freedom that are not positive. Section 3.4. */
-    | 'ERR_UNCERTAINTY_DEGREES_OF_FREEDOM';
+    | 'ERR_UNCERTAINTY_DEGREES_OF_FREEDOM'
+
+    /** An uncertainty map holds a key the specification does not define. Section 3.4. */
+    | 'ERR_UNCERTAINTY_UNKNOWN_KEY'
+
+    /** The data item is not tagged as a metrological value. Section 3. */
+    | 'ERR_TAG_MISMATCH'
+
+    /**
+     * A prefix of 0 written where it could have been omitted.
+     *
+     * Section 3.3 requires the prefix to be written when an uncertainty
+     * follows it, and Section 6 requires the encoding to be a function of the
+     * value alone — which two spellings of the same reading would not be.
+     */
+    | 'ERR_PREFIX_REDUNDANT';
 
 
 export interface McborErrorOptions extends ErrorOptions {

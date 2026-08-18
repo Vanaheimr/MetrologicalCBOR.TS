@@ -21,8 +21,9 @@ never heard of the tag still sees a well-formed array of standard numbers.
 
 ## Status
 
-**Early development.** The unit registry, a deterministic CBOR core and the
-domain model are in place; the tag 44252 codec that joins them is not. See
+**0.1.0 — the codec works.** All ten examples of specification Section 5 encode
+and decode byte for byte, in both directions. The text format and the
+document-level JSON conversion are still to come. See
 [WORKPLAN.md](WORKPLAN.md) for the plan and its work packages.
 
 | Work package | State |
@@ -31,8 +32,8 @@ domain model are in place; the tag 44252 codec that joins them is not. See
 | WP1 — Unit registry from specification Section 4 | done |
 | WP2 — Minimal deterministic CBOR core | done |
 | WP3 — Domain model and validation | done |
-| WP4 — Tag 44252 codec | next |
-| WP5 — Text format: grammar, renderer, parser | planned |
+| WP4 — Tag 44252 codec | done — **v0.1.0** |
+| WP5 — Text format: grammar, renderer, parser | next |
 | WP6 — Document-level CBOR/JSON conversion | planned |
 | WP7 — Hardening and conformance | planned |
 | WP8 — Documentation and release | planned |
@@ -49,7 +50,42 @@ npm install @vanaheimr/metrological-cbor
 Node 20 or newer. No runtime dependencies. ESM and CommonJS, with type
 declarations.
 
-## What works today
+## Reading and writing a metrological value
+
+```ts
+import { decodeMetrologicalValue, encodeMetrologicalValue,
+         metrologicalValue, decimal, unitById, Units, SIPrefix,
+         bytesToHex, hexToBytes } from '@vanaheimr/metrological-cbor';
+
+// 5.0 mA — nine bytes on the wire
+const reading = decodeMetrologicalValue(hexToBytes('D9ACDC83C4822018320422'));
+
+reading.formatValue();     // '5.0'  — the trailing zero is the resolution
+reading.prefix;            // -3
+reading.unit;              // the ampere
+
+bytesToHex(encodeMetrologicalValue(reading));   // back to the identical bytes
+```
+
+Writing one is the same in reverse:
+
+```ts
+const energy = metrologicalValue({
+    value:  decimal(110, -2),       // 1.10, exactly
+    unit:   unitById(Units.WattHour),
+    prefix: SIPrefix.Kilo,
+});
+
+bytesToHex(encodeMetrologicalValue(energy));    // 'D9ACDC83C48221186E0203'
+```
+
+Decoding is strict by default: bytes that are not the encoding a conforming
+encoder would have produced are rejected, which is what data that was signed
+requires. `{ strict: false }` accepts those spellings and normalises them.
+`{ units: 'preserve' }` on the way out reproduces a symbolic unit as it
+arrived, so a signature over a document this library did not write survives.
+
+## What else works today
 
 ```ts
 import { UnitRegistry, Units, METROLOGICAL_VALUE_TAG } from '@vanaheimr/metrological-cbor';

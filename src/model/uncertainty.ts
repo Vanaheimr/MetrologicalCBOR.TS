@@ -105,20 +105,24 @@ export type UncertaintyForm = 'bare' | 'map';
 
 export interface UncertaintyOptions {
 
+    // The optional fields accept an explicit `undefined` as well as being
+    // absent, because a decoder holding an optional field has exactly that in
+    // hand, and both spellings mean the same thing here: not stated.
+
     /** The magnitude, as reported. Never negative. */
     readonly magnitude: DecimalNumber;
 
     /** The coverage factor the magnitude belongs to. Defaults to 1. */
-    readonly coverageFactor?: DecimalNumber;
+    readonly coverageFactor?: DecimalNumber | undefined;
 
     /** The coverage probability, a fraction in ]0, 1]. */
-    readonly coverageProbability?: DecimalNumber;
+    readonly coverageProbability?: DecimalNumber | undefined;
 
     /** The probability distribution attributed to the measurand. */
-    readonly distribution?: UncertaintyDistribution;
+    readonly distribution?: UncertaintyDistribution | undefined;
 
     /** The effective degrees of freedom, positive. */
-    readonly degreesOfFreedom?: DecimalNumber;
+    readonly degreesOfFreedom?: DecimalNumber | undefined;
 
     /**
      * How it is to be written. Defaults to the compact `bare` where nothing

@@ -1,6 +1,6 @@
 {
   "name": "@vanaheimr/metrological-cbor",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Reference implementation of Metrological CBOR (mCBOR), CBOR tag 44252: quantity values with unit of measure, SI prefix and GUM measurement uncertainty.",
   "keywords": [
     "cbor",

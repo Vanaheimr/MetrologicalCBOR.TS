@@ -10,6 +10,14 @@ on the IANA registration of tag 44252 — see [WORKPLAN.md](WORKPLAN.md), WP8.
 
 ## [Unreleased]
 
+## [0.1.0] — 2026-08-18
+
+The first version that reads and writes CBOR tag 44252. All ten examples of
+specification Section 5 encode and decode byte for byte, in both directions.
+
+The text format and the document-level JSON conversion are not here yet; see
+[WORKPLAN.md](WORKPLAN.md), WP5 and WP6.
+
 ### Added
 
 - A minimal, deterministic CBOR implementation (RFC 8949) under `src/cbor`:
@@ -45,6 +53,22 @@ on the IANA registration of tag 44252 — see [WORKPLAN.md](WORKPLAN.md), WP8.
   refuses two different units, because the registry carries no conversion
   factors, and refuses an interval scale across two prefixes, because an offset
   rather than a factor separates those.
+- The codec for tag 44252 (WP4): `decodeMetrologicalValue`,
+  `encodeMetrologicalValue`, and the `…FromCbor` / `…ToCbor` pair for a reading
+  embedded in a larger document.
+- Decoding is strict by default and additionally rejects two spellings the
+  specification does not bless, because Section 6 requires one encoding per
+  reading and each of these would be a second: a single named unit written as a
+  one-element product, and a prefix of 0 written where nothing follows it.
+  Lenient mode reads both and normalises them.
+- Encoding takes `units: 'preserve'` to reproduce a symbolic unit as it
+  arrived. A symbolic unit is discouraged but legal, and a signature over one
+  has to survive.
+- A rational unit exponent is reduced on decoding, so `[2, 1]` is the integer
+  exponent 2 and `[-2, 4]` is `[-1, 2]`.
+- An uncertainty map holding a key this version of the specification does not
+  define is rejected rather than ignored: an uncertainty only partly understood
+  is not one to pass on as though it were understood entirely.
 
 - Project scaffolding: Apache-2.0 license, tsup build (ESM + CJS + type
   declarations), Vitest, ESLint flat configuration, GitHub Actions workflows
