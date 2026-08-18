@@ -31,6 +31,20 @@ on the IANA registration of tag 44252 — see [WORKPLAN.md](WORKPLAN.md), WP8.
   cross it.
 - Golden vectors from the worked example of the specification, extracted
   mechanically by `npm run extract:example` rather than transcribed.
+- The domain model under `src/model` (WP3): exact decimal numbers, the 25 SI
+  prefixes, unit references with rational exponents, GUM measurement
+  uncertainty, and `MetrologicalValue` itself. Every normative requirement of
+  specification Sections 3.1 to 3.4 is a typed error with a stable code and the
+  clause it enforces.
+- `divideDecimal` and `standardUncertainty` require the caller to state the
+  scale and the rounding. Deriving `u = U / k` is a metrological decision, and
+  a library that picked a precision for a measurement result would be asserting
+  something the measurement does not say.
+- `MetrologicalValue.compareQuantity` compares mantissa and total exponent, so
+  `5.0 mA` and `0.005 A` compare equal while their encodings stay distinct. It
+  refuses two different units, because the registry carries no conversion
+  factors, and refuses an interval scale across two prefixes, because an offset
+  rather than a factor separates those.
 
 - Project scaffolding: Apache-2.0 license, tsup build (ESM + CJS + type
   declarations), Vitest, ESLint flat configuration, GitHub Actions workflows

@@ -226,11 +226,23 @@ Estimates are focused person-days for one senior TypeScript developer, including
 
 *Deviation from plan:* the document walker is eager rather than lazily decoding. Laziness is an optimisation, and nothing in WP6 needs it; `walk` and `transform` over a decoded tree are what the JSON conversion will use.
 
-### WP3 — Domain model and validation (3–4 d)
+### WP3 — Domain model and validation (3–4 d) — **done 2026-08-18**
 
 - `DecimalNumber` (D2) with exact string rendering/parsing helpers; `Prefix` (the 25 exponents + symbols incl. `da`); `Uncertainty` (bare vs map, `standardUncertainty({ scale })` helper that divides by k with *explicit* rounding parameters — never silently); `UnitRef` + registry lookups; `MetrologicalValue` as immutable value object.
 - Every MUST from §2 of this plan implemented as a typed error with code (D8).
-- **Acceptance:** one negative unit test per validation rule; error codes documented.
+- **Acceptance:** met. 705 tests overall, 267 of them over the model; a negative test per validation rule, each pinning an error *code* rather than merely a throw. Coverage of `src/model` 99 % of statements, 98.8 % of branches. The ESLint float ban was verified to fire on `Number()`, `parseFloat()`, `Math.*` and `Number.parseFloat` inside `src/model` — a claim previously made and never checked.
+
+**Design decisions taken here**
+
+- **`divideDecimal` and `standardUncertainty` have no default scale or rounding.** Most quotients have no exact decimal form, and a library that silently picked a precision for a measurement result would be asserting something the measurement does not say. The caller states both, every time.
+- **`compareQuantity` refuses more than it answers.** Two different units cannot be compared, because the registry deliberately carries no conversion factors; an interval scale cannot be compared across two prefixes, because an offset rather than a factor separates them. Within one unit it is exact over mantissa and total exponent, per §6.
+- **The `with` copier distinguishes "unchanged" from "not stated".** Omitting `uncertainty` keeps the original, passing it as `undefined` drops it. `exactOptionalPropertyTypes` made that distinction explicit in the type rather than a convention.
+- **A one-element product of powers is rejected at construction** where its exponent is 1, mirroring how WP2 rejects a hand-built bignum tag: an encoder must never write it, so the model does not let it exist. A single factor at any other power is legitimate (`s^-2` has no named form) and is accepted.
+
+**Findings**
+
+- **`scaleOf` returned `-0` for an integer**, since negating a zero exponent produces it. `-0 === 0` holds but `Object.is` distinguishes them, so it leaked into a test and would have leaked into any code keying on the scale. Guarded.
+- Rounding was worth testing in both directions: `0.25` at scale 1 is `0.2` under half-even and `0.3` under half-up, and a negative quotient rounds away from zero under half-up but toward it under truncate. All four cases are pinned.
 
 ### WP4 — Tag 44252 codec (2–3 d)
 
@@ -340,7 +352,7 @@ Total ≈ **24–36 focused person-days** (the table shows mid-range). Calendar 
 | Spec-internal id contradictions propagate into code | wrong wire data — worst case for metrology | **closed:** errata corrected upstream and locally; registry generated from one validated data file; a test fetched into CI parses the spec and compares both directions |
 | Text grammar ambiguities (`dB` → deci-byte; prose strings that parse as values) | silent misinterpretation | unit-symbol-first tokenization, strict anchored grammar, ambiguity fixture table, `paths`/`schema-only` escape hatches, documented pitfalls |
 | Unicode homoglyphs (µ/μ, Ω/Ω) and superscripts | parse failures or duplicated spellings | NFC + explicit homoglyph normalization in the grammar, fixture-tested |
-| Float leakage (JS ecosystem habit) | resolution loss — spec violation | `bigint` end to end; ESLint rule banning `Number` in `model/`/`codec/`/`text/`; property tests compare exact strings |
+| Float leakage (JS ecosystem habit) | resolution loss — spec violation | **mitigated:** `bigint` end to end; the ESLint ban on `Number`, `parseFloat` and `Math` in `model/`/`codec/`/`text/` is in place and verified to fire; property tests compare exact strings |
 | JSON consumers mangling big numbers | data corruption outside our API | numbers > 2⁵³−1 become strings by default; documented |
 | Own CBOR core bugs | correctness | **largely mitigated:** RFC 8949 Appendix A vectors, 40 000 property-based cases including random byte soup, the worked example end to end; 95 % branch coverage. The 100 % target for `codec/` and `text/` stays with WP7 |
 

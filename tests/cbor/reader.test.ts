@@ -29,20 +29,9 @@ import { describe, expect, it } from 'vitest';
 import { CborError }                              from '../../src/errors.js';
 import { decode, decodeFirst, decodeHex, encodeToHex } from '../../src/cbor/index.js';
 import { hexToBytes }                             from '../../src/cbor/hex.js';
-import type { McborErrorCode }                    from '../../src/errors.js';
+import { codeOf }           from '../support/errors.js';
 
 
-function codeOf(action: () => unknown): McborErrorCode | 'no throw' {
-    try {
-        action();
-        return 'no throw';
-    }
-    catch (error) {
-        if (error instanceof CborError)
-            return error.code;
-        throw error;
-    }
-}
 
 
 describe('ill-formed input', () => {

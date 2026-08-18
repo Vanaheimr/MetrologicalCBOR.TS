@@ -31,9 +31,12 @@ export {
     CborError,
     McborError,
     UnitError,
+    ValueError,
     type McborErrorCode,
     type McborErrorOptions,
 } from './errors.js';
+
+export * from './model/index.js';
 
 export * as cbor from './cbor/index.js';
 

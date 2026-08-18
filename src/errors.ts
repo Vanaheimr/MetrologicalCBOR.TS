@@ -70,7 +70,69 @@ export type McborErrorCode =
     | 'ERR_CBOR_LIMIT_EXCEEDED'
 
     /** A value cannot be encoded, for example a map with a duplicate key. */
-    | 'ERR_CBOR_UNENCODABLE';
+    | 'ERR_CBOR_UNENCODABLE'
+
+    /**
+     * A reading is a binary floating-point number.
+     *
+     * Specification Section 3.1: an IEEE 754 double can represent neither
+     * `0.1` exactly nor a decimal scale at all, so it cannot carry a reading.
+     */
+    | 'ERR_VALUE_FLOAT'
+
+    /** A reading is a bigfloat (tag 5), which Section 3.1 excludes. */
+    | 'ERR_VALUE_BIGFLOAT'
+
+    /** A reading is neither an integer nor a decimal fraction. Section 3.1. */
+    | 'ERR_VALUE_TYPE'
+
+    /** A decimal exponent beyond what this implementation will reconstruct. Section 7. */
+    | 'ERR_VALUE_EXPONENT_RANGE'
+
+    /** A mantissa beyond what this implementation will reconstruct. Section 7. */
+    | 'ERR_VALUE_MANTISSA_RANGE'
+
+    /** A decimal string that is not a decimal number. */
+    | 'ERR_VALUE_SYNTAX'
+
+    /** A division was asked for without stating the scale to round it to. */
+    | 'ERR_VALUE_INEXACT'
+
+    /** An SI prefix that is not one of the 25 canonical exponents. Section 3.3. */
+    | 'ERR_PREFIX_INVALID'
+
+    /** A unit exponent whose numerator is zero. Section 3.2. */
+    | 'ERR_UNIT_EXPONENT_ZERO'
+
+    /** A unit exponent whose denominator is not positive. Section 3.2. */
+    | 'ERR_UNIT_EXPONENT_DENOMINATOR'
+
+    /** A product of powers with no factors. Section 3.2. */
+    | 'ERR_UNIT_PRODUCT_EMPTY'
+
+    /** A single named unit written as a one-element product. Section 3.2. */
+    | 'ERR_UNIT_SINGLE_AS_PRODUCT'
+
+    /** The tag content is not an array of two, three or four items. Section 3. */
+    | 'ERR_ARITY'
+
+    /** A negative measurement uncertainty. Section 3.4. */
+    | 'ERR_UNCERTAINTY_NEGATIVE'
+
+    /** An uncertainty map without its magnitude. Section 3.4. */
+    | 'ERR_UNCERTAINTY_NO_MAGNITUDE'
+
+    /** A coverage factor that is not positive. Section 3.4. */
+    | 'ERR_UNCERTAINTY_COVERAGE_FACTOR'
+
+    /** A coverage probability outside ]0, 1]. Section 3.4. */
+    | 'ERR_UNCERTAINTY_PROBABILITY'
+
+    /** An unknown probability distribution, or the "not stated" 0 written out. Section 3.4. */
+    | 'ERR_UNCERTAINTY_DISTRIBUTION'
+
+    /** Effective degrees of freedom that are not positive. Section 3.4. */
+    | 'ERR_UNCERTAINTY_DEGREES_OF_FREEDOM';
 
 
 export interface McborErrorOptions extends ErrorOptions {
@@ -119,6 +181,20 @@ export class McborError extends Error {
 export class UnitError extends McborError {
 
     override readonly name: string = 'UnitError';
+
+}
+
+
+/**
+ * A reading, a prefix or an uncertainty is not one the specification permits.
+ *
+ * Separate from {@link CborError} because the bytes may be perfectly
+ * well-formed CBOR and still not be a metrological value: a binary float is
+ * valid CBOR and an invalid reading.
+ */
+export class ValueError extends McborError {
+
+    override readonly name: string = 'ValueError';
 
 }
 
