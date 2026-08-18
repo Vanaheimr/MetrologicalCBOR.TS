@@ -21,11 +21,10 @@ never heard of the tag still sees a well-formed array of standard numbers.
 
 ## Status
 
-**0.2.0 — the codec and the text format work.** All ten examples of
-specification Section 5 encode and decode byte for byte, and a reading survives
-being written as text and read back. The document-level JSON conversion is
-still to come. See [WORKPLAN.md](WORKPLAN.md) for the plan and its work
-packages.
+**0.3.0 — it does what it set out to do.** mCBOR is read and written, all ten
+examples of specification Section 5 byte for byte, and a whole document travels
+through JSON with every measurement intact. What remains is hardening and the
+conformance matrix; see [WORKPLAN.md](WORKPLAN.md).
 
 | Work package | State |
 |---|---|
@@ -35,8 +34,8 @@ packages.
 | WP3 — Domain model and validation | done |
 | WP4 — Tag 44252 codec | done — **v0.1.0** |
 | WP5 — Text format: grammar, renderer, parser | done — **v0.2.0** |
-| WP6 — Document-level CBOR/JSON conversion | next |
-| WP7 — Hardening and conformance | planned |
+| WP6 — Document-level CBOR/JSON conversion | done — **v0.3.0** |
+| WP7 — Hardening and conformance | next |
 | WP8 — Documentation and release | planned |
 
 Version 1.0.0 is gated on the IANA registration of the tag. Until then the
@@ -85,6 +84,40 @@ encoder would have produced are rejected, which is what data that was signed
 requires. `{ strict: false }` accepts those spellings and normalises them.
 `{ units: 'preserve' }` on the way out reproduces a symbolic unit as it
 arrived, so a signature over a document this library did not write survives.
+
+## A whole document through JSON
+
+```ts
+import { mcborToJson, jsonToMcbor } from '@vanaheimr/metrological-cbor';
+
+mcborToJson(meterReading);
+// {
+//   meter:       '1ISA0000000042',
+//   transaction: 'a4f1c9e2',
+//   context:     'Transaction.Begin',
+//   time:        '2026-08-15T08:14:00Z',
+//   energy:      '(1234.567 ±12.3) kWh, k=2, p=0.95, dist=normal'
+// }
+```
+
+The measurement is one string — value, decimal scale, unit, prefix, magnitude,
+coverage factor, coverage probability and distribution, all of it — and
+everything else is ordinary JSON. `jsonToMcbor` reads it back, byte-identical
+for documents of readings, text, integers within the safe range, booleans,
+nulls, arrays and text-keyed maps.
+
+What JSON cannot hold exactly is refused rather than rounded: an integer beyond
+2^53 is an error, not the nearest double. Byte strings, floats and dates
+convert one way, and say so.
+
+By default every string is tried against the reading grammar, which is what
+makes the round trip work without configuration. That has a documented hazard —
+a prose field holding `"1 h"` becomes one hour — so an application with a schema
+can decide instead:
+
+```ts
+jsonToMcbor(json, { readings: (text, path) => path.at(-1) === 'energy' });
+```
 
 ## A reading as text
 

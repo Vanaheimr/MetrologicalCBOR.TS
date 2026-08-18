@@ -289,10 +289,22 @@ The first of these appeared only after 100 000 cases. In response the suite gain
 
 *Deviation from plan:* the renderer and parser are free functions rather than `MetrologicalValue.toString()` / `.parse()`, for the same layering reason as WP4 — a model that formats itself has to know the format.
 
-### WP6 — JSON document conversion (2–3 d)
+### WP6 — JSON document conversion (2–3 d) — **done 2026-08-18, released as v0.3.0**
 
 - `mcborToJson` / `jsonToMcbor` per the D5 table, options (`numbers`, `bytes`, `paths`, `mode`, `onUnknownTag`).
-- **Acceptance:** worked-example meter payload converts to the expected JSON (energy as one string) and back to identical bytes; profile edge cases (big ints, byte strings, tag 0) covered; hazard cases (`"1 h"` prose with exclude path) documented and tested.
+- **Acceptance:** met. The worked-example meter payload converts to the expected JSON object with the energy as one string; the profile round-trips byte-identically over 60 000 generated documents; the edge cases (big integers, byte strings, floats, dates, non-text keys, unknown tags) and the `"1 h"` hazard are each tested. 1003 tests, coverage 97.2 % of statements.
+
+**Decisions taken here**
+
+- **Only metrological values become strings** (the maintainer's decision); everything else takes the JSON form it ordinarily would. That is also the cleaner division: a reading is what JSON cannot express, while a timestamp or an identification is a string in JSON anyway.
+- **An integer beyond ±(2^53 − 1) is refused, not rounded.** A nanosecond timestamp passes it, so this is not exotic, and the nearest double is a different number. `bigIntegers: 'string'` carries the digits, one-way.
+- **The round-trip guarantee is stated narrowly and honestly.** Readings, text, safe integers, booleans, nulls, arrays and text-keyed maps come back byte-identical; byte strings, floats, dates and big integers are one-way because JSON has no room for what distinguished them. Each is an error or an option, never a silent conversion.
+- **`readings` defaults to `'auto'`**, which is what makes the round trip work without configuration. Its hazard is named in the code, the tests and the README rather than hidden: a prose field holding `"1 h"` becomes one hour, and a predicate is the answer for an application with a schema. *This was open question 3, decided by default rather than by the maintainer — it is cheap to change.*
+- Where a predicate says a string is a reading and it does not parse, that is an **error** rather than a fallback to text: the caller asserted it, and failing quietly would lose a measurement.
+
+**Finding**
+
+- The default test timeout of five seconds is load-dependent, and the text round-trip property sits right on it. **This retroactively explains the unexplained failure recorded under WP5**: a timeout reports no counterexample, which is exactly the output seen there, and is why two million further cases could not reproduce it. The suite now allows the property tests the seconds they honestly take.
 
 ### WP7 — Hardening and conformance (3–5 d)
 
@@ -368,7 +380,7 @@ Versioning: SemVer; 0.x during WP4–WP7 (published early — real feedback beat
 | ~~M1~~ | ~~WP1 + WP2~~ | **done 2026-08-18** — registry frozen, errata fixed, CBOR core round-trips the worked example byte-exact | 9 d |
 | ~~M2~~ | ~~WP3 + WP4~~ → **v0.1.0** | **done 2026-08-18** — all §5 vectors byte-exact in both directions | 15 d |
 | ~~M3~~ | ~~WP5~~ → **v0.2.0** | **done 2026-08-18** — grammar frozen, lossless text round-trip | 21 d |
-| M4 | WP6 → **v0.3.0** | document JSON round-trip | 24 d |
+| ~~M4~~ | ~~WP6~~ → **v0.3.0** | **done 2026-08-18** — document JSON round-trip | 24 d |
 | M5 | WP7 → **v0.9.0** | conformance matrix complete, fuzzing in nightly | 28 d |
 | M6 | WP8 → **v1.0.0** | published with provenance; IANA recorded | 31 d |
 
@@ -393,8 +405,8 @@ Total ≈ **24–36 focused person-days** (the table shows mid-range). Calendar 
 ## 10. Open questions for the maintainer
 
 1. **NPM package name/scope** — **decided 2026-08-18: `@vanaheimr/metrological-cbor`** (the scope is available; it matches the repository's own namespace and the Styx reference implementation, rather than the application scope ChargyCore uses).
-2. **JSON profile default** — plan assumes: metrological values and CBOR-only types become strings, JSON-native types stay native, with an `everything-as-string` option. Confirm, or make all scalars strings by default?
-3. **JSON → mCBOR detection default** — try-parse every string against the strict grammar (convenient, documented hazard) vs. `schema-only` (explicit paths, zero guessing). Plan default: try-parse.
+2. **JSON profile default** — **decided 2026-08-18: only metrological values become strings**, everything else takes its ordinary JSON form.
+3. **JSON → mCBOR detection default** — **taken by default, not decided:** `readings: 'auto'` try-parses every candidate string, which is what makes the round trip work without configuration, at the documented cost that a prose field holding `"1 h"` becomes one hour. A predicate is available per path. Cheap to flip to `'none'` if that trade is wrong for the intended consumers.
 4. **Decoder strictness default** — `strict` rejects discouraged-but-well-formed spellings (`4([0,5])`, `[v, u, 0]` without uncertainty, one-element unit arrays). Plan default: strict on, lenient opt-in. This also needs two decoder-side clarifications in the spec (Appendix A, A5/A6).
 5. **Uncertainty text syntax** — the extension tokens beyond the spec's own `, k=2` (`p=`, `dist=`, `ν=`) are this project's invention; review at WP5 grammar freeze — ideally they feed back into the spec as its recommended display form.
 6. **COSE demo in `examples/`** — worth the dev-dependency, or defer entirely?

@@ -98,6 +98,18 @@ export type McborErrorCode =
     /** Text that is not a reading in the format this library writes. */
     | 'ERR_TEXT_SYNTAX'
 
+    /** A data item with no JSON representation under the chosen options. */
+    | 'ERR_JSON_UNSUPPORTED'
+
+    /** A map key that is not text, which a JSON object cannot hold. */
+    | 'ERR_JSON_KEY'
+
+    /** An integer JSON cannot hold exactly. */
+    | 'ERR_JSON_PRECISION'
+
+    /** A JSON value with no CBOR counterpart. */
+    | 'ERR_JSON_TYPE'
+
     /** A division was asked for without stating the scale to round it to. */
     | 'ERR_VALUE_INEXACT'
 

@@ -10,6 +10,37 @@ on the IANA registration of tag 44252 — see [WORKPLAN.md](WORKPLAN.md), WP8.
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-08-18
+
+Whole documents between CBOR and JSON, with every metrological value as one
+string. This completes what the library set out to do: read and write mCBOR,
+and carry it through JSON without losing a decimal place.
+
+### Added
+
+- `mcborToJson` and `jsonToMcbor`, and `jsonToCbor` for a document embedded in
+  a larger one (WP6). A metrological value becomes a string; everything else
+  takes the JSON form it ordinarily would.
+- A stated round-trip guarantee: a document of readings, text, integers within
+  ±(2^53 − 1), booleans, nulls, arrays and text-keyed maps comes back
+  byte-identical. Byte strings, floats, dates and big integers are one-way,
+  because JSON has no room for what made them what they were, and each is
+  either an error or an option that says so.
+- An integer beyond the safe range is refused rather than rounded
+  (`ERR_JSON_PRECISION`). Nanosecond timestamps pass 2^53, so this is not an
+  exotic case, and the nearest double is a different number.
+- `readings` decides which JSON strings are metrological values: `'auto'`
+  tries every candidate against the grammar, `'none'` tries none, and a
+  predicate decides per path. The `'auto'` hazard — a prose field holding
+  `"1 h"` becomes one hour — is documented and tested rather than hidden.
+
+### Fixed
+
+- The test timeout, which the default of five seconds made load-dependent. A
+  property test running a hundred thousand cases takes seconds, and one that
+  fails only on a busy machine reports a timeout with no counterexample, which
+  reads exactly like a real defect.
+
 ## [0.2.0] — 2026-08-18
 
 The text format: a reading as one line of text, and back again without losing

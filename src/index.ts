@@ -42,6 +42,8 @@ export * from './codec/index.js';
 
 export * from './text/index.js';
 
+export * from './json/index.js';
+
 export * as cbor from './cbor/index.js';
 
 export {
