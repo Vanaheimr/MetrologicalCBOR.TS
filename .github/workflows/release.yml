@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    environment: release
+
+    permissions:
+      contents:  read
+      # Required for npm provenance: the workflow signs the published package
+      # with an OIDC token, so consumers can verify which commit produced it.
+      id-token:  write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version:  '22'
+          registry-url:  'https://registry.npmjs.org'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Verify
+        run: npm run verify
+
+      - name: Check that the tag matches the package version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG=$(node -p "require('./package.json').version")
+          if [ "$TAG" != "$PKG" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package version $PKG" >&2
+            exit 1
+          fi
+
+      - name: Publish
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

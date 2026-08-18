@@ -1,0 +1,10 @@
+# Golden test vectors and the specification are byte-exact artefacts.
+# Normalising every text file to LF in the repository keeps hashes and
+# byte counts identical on every platform.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.cbor binary

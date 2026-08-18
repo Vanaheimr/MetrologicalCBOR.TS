@@ -1,0 +1,92 @@
+{
+  "$comment": [
+    "The unit registry of CBOR tag 44252, transcribed from Section 4 of the specification (spec/README.md).",
+    "This file is the single source of truth: src/registry/units.generated.ts is produced from it by",
+    "scripts/generate-registry.ts, and tests/registry/specification.test.ts parses the specification and",
+    "fails if the two ever diverge. Do not edit the generated file, and do not change a unit here without a",
+    "corresponding change in the specification.",
+    "",
+    "One line per unit, in the order of the specification table, so that a reviewer can compare row by row.",
+    "The 'cbor' field repeats the encoding the specification table states; the generator recomputes it and",
+    "rejects a mismatch, which makes it a check rather than a duplication.",
+    "",
+    "The 'senml' field carries only the mappings the specification names in its SenML paragraph, not",
+    "everything RFC 8428 defines. Adding an undocumented mapping here would be exactly the kind of drift",
+    "this file exists to prevent."
+  ],
+
+  "specification": {
+    "title":   "CBOR Tag 44252: Metrological Values",
+    "version": "1.0",
+    "date":    "2026-08-14",
+    "section": "4",
+    "tag":     44252
+  },
+
+  "identifications": {
+    "reserved":              0,
+    "specificationManaged":  [1, 32767],
+    "privateUse":            [32768, 65535],
+    "maximum":               65535,
+    "reservedForFutureUse":  [[40, 59], [66, 99], [100, 119], [123, 139]]
+  },
+
+  "units": [
+
+    { "id":   1, "cbor": "01",   "symbol": "1",     "name": "one",                        "constant": "One",                    "aliases": ["one", "/"], "senml": "/",   "note": "The neutral element of unit multiplication and the coherent SI unit of a quantity of dimension one. A reading without a unit is not the same thing as a reading whose unit is one." },
+    { "id":   2, "cbor": "02",   "symbol": "Wh",    "name": "watt-hour",                  "constant": "WattHour",               "aliases": [],           "senml": "Wh"  },
+    { "id":   3, "cbor": "03",   "symbol": "W",     "name": "watt",                       "constant": "Watt",                   "aliases": [],           "senml": "W"   },
+    { "id":   4, "cbor": "04",   "symbol": "A",     "name": "ampere",                     "constant": "Ampere",                 "aliases": [],           "senml": "A"   },
+    { "id":   5, "cbor": "05",   "symbol": "V",     "name": "volt",                       "constant": "Volt",                   "aliases": [],           "senml": "V"   },
+    { "id":   6, "cbor": "06",   "symbol": "%",     "name": "percent",                    "constant": "Percent",                "aliases": [],           "note": "The plain dimensionless ratio. SenML's /100 convention for percent has no counterpart here." },
+    { "id":   7, "cbor": "07",   "symbol": "°C",    "name": "degree Celsius",             "constant": "DegreeCelsius",          "aliases": ["Cel"],      "senml": "Cel", "affine": true },
+    { "id":   8, "cbor": "08",   "symbol": "s",     "name": "second",                     "constant": "Second",                 "aliases": []  },
+    { "id":   9, "cbor": "09",   "symbol": "Hz",    "name": "hertz",                      "constant": "Hertz",                  "aliases": [],           "senml": "Hz"  },
+    { "id":  10, "cbor": "0A",   "symbol": "var",   "name": "volt-ampere reactive",       "constant": "VoltAmpereReactive",     "aliases": [],           "senml": "var" },
+    { "id":  11, "cbor": "0B",   "symbol": "VA",    "name": "volt-ampere",                "constant": "VoltAmpere",             "aliases": [],           "senml": "VA"  },
+    { "id":  12, "cbor": "0C",   "symbol": "Ah",    "name": "ampere-hour",                "constant": "AmpereHour",             "aliases": []  },
+    { "id":  13, "cbor": "0D",   "symbol": "varh",  "name": "volt-ampere-reactive hour",  "constant": "VoltAmpereReactiveHour", "aliases": []  },
+    { "id":  14, "cbor": "0E",   "symbol": "Ω",     "name": "ohm",                        "constant": "Ohm",                    "aliases": ["Ohm"],      "note": "The symbol is U+03A9 GREEK CAPITAL LETTER OMEGA. NFC normalisation maps U+2126 OHM SIGN onto it, so both spellings resolve." },
+    { "id":  15, "cbor": "0F",   "symbol": "m",     "name": "meter",                      "constant": "Meter",                  "aliases": ["Metre"],    "senml": "m"   },
+    { "id":  16, "cbor": "10",   "symbol": "g",     "name": "gram",                       "constant": "Gram",                   "aliases": [],           "note": "The SI base unit of mass is the kilogram, but SI prefixes attach to the gram. Five kilograms is (5, 16, 3): five, gram, kilo." },
+    { "id":  17, "cbor": "11",   "symbol": "K",     "name": "kelvin",                     "constant": "Kelvin",                 "aliases": []  },
+    { "id":  18, "cbor": "12",   "symbol": "h",     "name": "hour",                       "constant": "Hour",                   "aliases": []  },
+    { "id":  19, "cbor": "13",   "symbol": "min",   "name": "minute",                     "constant": "Minute",                 "aliases": []  },
+    { "id":  20, "cbor": "14",   "symbol": "J",     "name": "joule",                      "constant": "Joule",                  "aliases": []  },
+    { "id":  21, "cbor": "15",   "symbol": "Pa",    "name": "pascal",                     "constant": "Pascal",                 "aliases": []  },
+    { "id":  22, "cbor": "16",   "symbol": "bit/s", "name": "bit per second",             "constant": "BitPerSecond",           "aliases": ["bps"] },
+    { "id":  23, "cbor": "17",   "symbol": "S",     "name": "siemens",                    "constant": "Siemens",                "aliases": []  },
+
+    { "id":  24, "cbor": "1818", "symbol": "mol",   "name": "mole",                       "constant": "Mole",                   "aliases": []  },
+    { "id":  25, "cbor": "1819", "symbol": "cd",    "name": "candela",                    "constant": "Candela",                "aliases": []  },
+    { "id":  26, "cbor": "181A", "symbol": "N",     "name": "newton",                     "constant": "Newton",                 "aliases": []  },
+    { "id":  27, "cbor": "181B", "symbol": "C",     "name": "coulomb",                    "constant": "Coulomb",                "aliases": []  },
+    { "id":  28, "cbor": "181C", "symbol": "F",     "name": "farad",                      "constant": "Farad",                  "aliases": []  },
+    { "id":  29, "cbor": "181D", "symbol": "Wb",    "name": "weber",                      "constant": "Weber",                  "aliases": []  },
+    { "id":  30, "cbor": "181E", "symbol": "T",     "name": "tesla",                      "constant": "Tesla",                  "aliases": []  },
+    { "id":  31, "cbor": "181F", "symbol": "H",     "name": "henry",                      "constant": "Henry",                  "aliases": []  },
+    { "id":  32, "cbor": "1820", "symbol": "lm",    "name": "lumen",                      "constant": "Lumen",                  "aliases": []  },
+    { "id":  33, "cbor": "1821", "symbol": "lx",    "name": "lux",                        "constant": "Lux",                    "aliases": []  },
+    { "id":  34, "cbor": "1822", "symbol": "Bq",    "name": "becquerel",                  "constant": "Becquerel",              "aliases": []  },
+    { "id":  35, "cbor": "1823", "symbol": "Gy",    "name": "gray",                       "constant": "Gray",                   "aliases": []  },
+    { "id":  36, "cbor": "1824", "symbol": "Sv",    "name": "sievert",                    "constant": "Sievert",                "aliases": []  },
+    { "id":  37, "cbor": "1825", "symbol": "kat",   "name": "katal",                      "constant": "Katal",                  "aliases": []  },
+    { "id":  38, "cbor": "1826", "symbol": "rad",   "name": "radian",                     "constant": "Radian",                 "aliases": []  },
+    { "id":  39, "cbor": "1827", "symbol": "sr",    "name": "steradian",                  "constant": "Steradian",              "aliases": []  },
+
+    { "id":  60, "cbor": "183C", "symbol": "d",     "name": "day",                        "constant": "Day",                    "aliases": []  },
+    { "id":  61, "cbor": "183D", "symbol": "°",     "name": "degree",                     "constant": "Degree",                 "aliases": ["deg"] },
+    { "id":  62, "cbor": "183E", "symbol": "l",     "name": "litre",                      "constant": "Litre",                  "aliases": ["L", "Liter"] },
+    { "id":  63, "cbor": "183F", "symbol": "t",     "name": "tonne",                      "constant": "Tonne",                  "aliases": []  },
+    { "id":  64, "cbor": "1840", "symbol": "‰",     "name": "permille",                   "constant": "Permille",               "aliases": []  },
+    { "id":  65, "cbor": "1841", "symbol": "ppm",   "name": "parts per million",          "constant": "PartsPerMillion",        "aliases": [],           "senml": "ppm" },
+
+    { "id": 120, "cbor": "1878", "symbol": "bit",   "name": "bit",                        "constant": "Bit",                    "aliases": [],           "senml": "bit" },
+    { "id": 121, "cbor": "1879", "symbol": "B",     "name": "byte",                       "constant": "Byte",                   "aliases": []  },
+    { "id": 122, "cbor": "187A", "symbol": "B/s",   "name": "byte per second",            "constant": "BytePerSecond",          "aliases": []  },
+
+    { "id": 140, "cbor": "188C", "symbol": "m²",    "name": "square meter",               "constant": "SquareMeter",            "aliases": ["m2"] },
+    { "id": 141, "cbor": "188D", "symbol": "m³",    "name": "cubic meter",                "constant": "CubicMeter",             "aliases": ["m3"] }
+
+  ]
+}

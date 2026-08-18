@@ -1,0 +1,93 @@
+{
+  "name": "@vanaheimr/metrological-cbor",
+  "version": "0.0.0",
+  "description": "Reference implementation of Metrological CBOR (mCBOR), CBOR tag 44252: quantity values with unit of measure, SI prefix and GUM measurement uncertainty.",
+  "keywords": [
+    "cbor",
+    "mcbor",
+    "metrology",
+    "legal-metrology",
+    "measurement",
+    "uncertainty",
+    "gum",
+    "si-units",
+    "unit-of-measure",
+    "rfc8949",
+    "tag-44252",
+    "smart-metering",
+    "e-mobility"
+  ],
+  "homepage": "https://github.com/OpenChargingCloud/MetrologicalCBOR.TS#readme",
+  "bugs": {
+    "url": "https://github.com/OpenChargingCloud/MetrologicalCBOR.TS/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OpenChargingCloud/MetrologicalCBOR.TS.git"
+  },
+  "license": "Apache-2.0",
+  "author": "GraphDefined GmbH <achim.friedland@graphdefined.com>",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE",
+    "CHANGELOG.md"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "npm run build:js && npm run build:types",
+    "build:js": "tsup",
+    "build:types": "tsc -p tsconfig.build.json --emitDeclarationOnly",
+    "clean": "node -e \"import('node:fs').then(fs => fs.rmSync('dist', { recursive: true, force: true }))\"",
+    "generate:registry": "tsx scripts/generate-registry.ts",
+    "check:registry": "tsx scripts/generate-registry.ts --check",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "verify": "npm run check:registry && npm run typecheck && npm run lint && npm run test && npm run build",
+    "prepublishOnly": "npm run verify"
+  },
+  "peerDependencies": {
+    "typescript": ">=5.4"
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.2.0",
+    "@vitest/coverage-v8": "^4.1.10",
+    "eslint": "^10.8.1",
+    "globals": "^17.11.0",
+    "tsup": "^8.5.1",
+    "tsx": "^4.23.12",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.67.0",
+    "vitest": "^4.1.10"
+  }
+}

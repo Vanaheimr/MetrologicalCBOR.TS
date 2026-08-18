@@ -1,0 +1,24 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.eslintcache
+
+# The specification is maintained in its own repository and is only a working
+# copy here. tests/registry/specification.test.ts compares the unit registry
+# against it entry by entry where it is present, and skips where it is not.
+spec/
+
+# Editors
+.idea/
+*.swp
+.DS_Store
+
+# Logs
+npm-debug.log*
+*.log
+
+# Local environment
+.env
+.env.*
+!.env.example
