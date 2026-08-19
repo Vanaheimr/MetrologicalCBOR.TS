@@ -31,7 +31,9 @@
  *
  * The bundle has to be built first, so these tests skip where `dist/` is
  * absent rather than fail, in the same way the specification comparison does.
- * `npm run verify` builds it, and CI runs `npm run verify`.
+ * `npm run verify` builds it — but not every job runs `verify`, and the
+ * nightly coverage job does not, so the skip has to hold on its own rather
+ * than because a build happened to run first.
  */
 
 import { execSync }                 from 'node:child_process';
@@ -40,7 +42,7 @@ import { existsSync, readFileSync }    from 'node:fs';
 import { dirname, resolve }            from 'node:path';
 import { fileURLToPath }               from 'node:url';
 
-import { describe, expect, it }        from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 
 const root   = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -110,7 +112,14 @@ function inABrowser(): Record<string, unknown> {
 
 describe.runIf(built)('the bundle, with no Node global in sight', () => {
 
-    const library = inABrowser();
+    // `runIf` decides which tests run, not whether this factory executes:
+    // Vitest calls it while collecting, skipped or not. Loading the bundle
+    // here would therefore read `dist/` even where the guard says there is
+    // nothing to read, which turns a suite that meant to skip into one that
+    // fails to collect. `beforeAll` is the part a skipped suite does not run.
+    let library: Record<string, unknown>;
+
+    beforeAll(() => { library = inABrowser(); });
 
     it('loads at all', () => {
 
@@ -196,7 +205,10 @@ describe.runIf(built)('the bundle, with no Node global in sight', () => {
 
 describe.runIf(built)('what the bundle does not reach for', () => {
 
-    const source = readFileSync(bundle, 'utf8');
+    // In `beforeAll` for the reason above.
+    let source: string;
+
+    beforeAll(() => { source = readFileSync(bundle, 'utf8'); });
 
     it.each([
         // Not `\brequire\s*\(`: `#` is a non-word character, so a word boundary
@@ -235,16 +247,26 @@ describe.runIf(built)('what would be published', () => {
     interface PackedFile { readonly path: string }
     interface PackReport { readonly files: readonly PackedFile[]; readonly unpackedSize: number }
 
+    let report: PackReport;
+    let paths:  string[];
+
+    // In `beforeAll` for the reason above, which matters twice here: a suite
+    // that means to skip should not be spawning `npm pack` either.
+    //
     // One command string through the shell rather than a program and an
     // argument list: npm is a `.cmd` shim on Windows, which Node will not spawn
     // directly, and passing separate arguments alongside `shell: true` is the
     // combination that earns a deprecation warning. Nothing here is interpolated.
-    const report = (JSON.parse(
-        execSync('npm pack --dry-run --json',
-                 { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }),
-    ) as PackReport[])[0]!;
+    beforeAll(() => {
 
-    const paths = report.files.map(file => file.path.replace(/\\/g, '/'));
+        report = (JSON.parse(
+            execSync('npm pack --dry-run --json',
+                     { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }),
+        ) as PackReport[])[0]!;
+
+        paths = report.files.map(file => file.path.replace(/\\/g, '/'));
+
+    });
 
     it('is the build, the types, the licence and the documents that are documents', () => {
 
