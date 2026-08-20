@@ -38,7 +38,7 @@ import { uncertainty }           from '../../src/model/uncertainty.js';
 import { metrologicalValue }     from '../../src/model/value.js';
 import { STANDARD_UNITS }        from '../../src/registry/units.generated.js';
 import { jsonToMcbor, mcborToJson } from '../../src/json/index.js';
-import { assertStable }          from '../support/stability.js';
+import { assertStable, reproducibly } from '../support/stability.js';
 
 
 /** A reading, as the CBOR item a document would carry. */
@@ -123,7 +123,7 @@ describe('the profile round-trips', () => {
                              bytesToHex(bytes),
                              () => bytesToHex(bytes));
             }),
-            { numRuns: 20_000 },
+            reproducibly(20_000),
         );
 
     });
@@ -146,7 +146,7 @@ describe('the profile round-trips', () => {
                 );
 
             }),
-            { numRuns: 20_000 },
+            reproducibly(20_000),
         );
 
     });
@@ -160,7 +160,7 @@ describe('the profile round-trips', () => {
                              bytesToHex(bytes),
                              () => bytesToHex(bytes));
             }),
-            { numRuns: 20_000 },
+            reproducibly(20_000),
         );
 
     });

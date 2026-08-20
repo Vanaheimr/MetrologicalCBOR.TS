@@ -36,7 +36,13 @@ jobs:
         # specification rather than silently skipped.
         run: npm run fetch:spec
 
+      # The property suites run from a fixed seed on every push, so that a red
+      # run can be run again. The exploring happens here instead, where nobody
+      # is waiting: a different seed each night, named in the failure message
+      # and equal to this run number, so a red night reproduces exactly.
       - run: npm run verify
+        env:
+          MCBOR_PROPERTY_SEED: ${{ github.run_number }}
 
   coverage:
     name: Coverage
@@ -50,6 +56,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:coverage
+        env:
+          MCBOR_PROPERTY_SEED: ${{ github.run_number }}
 
       - uses: actions/upload-artifact@v4
         with:
