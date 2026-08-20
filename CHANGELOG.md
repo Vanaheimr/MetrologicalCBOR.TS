@@ -35,14 +35,19 @@ implementations disagreed. This release implements those decisions.
   conversion. Like the other specification-bound suites it skips where the
   annex is absent.
 - **A reproducer for a fault in the platform**, not in this library:
-  `scripts/v8-json-key-repro.mjs` shows `JSON.parse` on Node 26.3.0 returning
-  an object key one character short where the key had to be escaped — a key
-  written `"\""` comes back as a lone backslash. It is plain JavaScript with no
-  imports, deliberately: nothing of this library is in it, which is the whole
-  point. Nothing in `src/` calls `JSON.parse` either — the JSON *text* reader
-  here is this project's own scanner — so the library is unaffected. This is
-  what stood behind the property failure listed as unexplained under 0.9.1; see
-  [WORKPLAN.md](WORKPLAN.md), WP8.
+  `scripts/v8-json-key-repro.mjs` shows `JSON.parse` returning the wrong object
+  key on Node 26.3.0. V8 caches an object's property keys against the keys of
+  the object it parsed before; a key ending in an escaped backslash poisons
+  that cache, and the next object with the same preceding key gets the poisoned
+  key back in place of its own. Already reported as
+  [nodejs/node#63785](https://github.com/nodejs/node/issues/63785) and forwarded
+  to V8 as [issue 521080746](https://issues.chromium.org/issues/521080746); the
+  narrowing this project added is in the script and in
+  [WORKPLAN.md](WORKPLAN.md), WP8. It is plain JavaScript with no imports,
+  deliberately: nothing of this library is in it, which is the whole point.
+  Nothing in `src/` calls `JSON.parse` either — the JSON *text* reader here is
+  this project's own scanner — so the library is unaffected. This is what stood
+  behind the property failure listed as unexplained under 0.9.1.
 - A nightly job runs that reproducer on Node 20, 22, 24 and latest and
   **reports rather than fails**, there being nothing here to fix. It answers
   what one machine could not: which versions carry this, and when it stops.
@@ -166,9 +171,10 @@ freeze declared in 0.9.0 holds.
   WP8, for what has been ruled out.
 
   *Closed on 2026-08-20, and the diagnosis above is half right. The property is
-  a function of its input; the platform underneath it is not. `JSON.parse`
-  returns an object key one character short where the key had to be escaped —
-  reproduced with no library in sight by `scripts/v8-json-key-repro.mjs`.*
+  a function of its input; the platform underneath it is not. V8 caches an
+  object's property keys against the previous object's, and a key ending in an
+  escaped backslash poisons that cache — reproduced with no library in sight by
+  `scripts/v8-json-key-repro.mjs`, and already upstream as nodejs/node#63785.*
 
 ## [0.9.0] — 2026-08-18
 

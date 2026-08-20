@@ -108,10 +108,10 @@ const anyDocument: fc.Arbitrary<CborValue> = fc.letrec<{ value: CborValue }>(tie
  * The second property sends the tree through `JSON.stringify` and `JSON.parse`
  * on purpose, because a caller holding a JSON tree will do exactly that. That
  * gives a failure here two possible authors, and one of them is not this
- * library: WP8 was `JSON.parse` returning an object key one character short,
- * and every hour spent on the document was an hour spent on the wrong suspect.
- * So the message asks the platform outright rather than leaving the reader to
- * suspect the nearest code.
+ * library: WP8 was `JSON.parse` handing back a key it had cached from the
+ * object before (nodejs/node#63785), and every hour spent on the document was
+ * an hour spent on a passenger. So the message asks the platform outright
+ * rather than leaving the reader to suspect the nearest code.
  *
  * A clean answer does **not** clear the platform. The fault comes and goes with
  * the state of the process and this runs after the fact, so it can miss. A

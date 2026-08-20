@@ -16,150 +16,117 @@
  */
 
 /**
- * `JSON.parse` returns a wrong object key, on Node 26.3.0.
+ * `JSON.parse` returns the wrong object key. Two lines, deterministic, and
+ * nothing of this library in it:
+ *
+ *     JSON.parse('{"h":[],"\\\\":0}');                  // poison
+ *     Object.keys(JSON.parse('{"h":1,"\\"":2}'))[1];    // '"' comes back as '\'
  *
  *     node scripts/v8-json-key-repro.mjs
  *
- * Seconds to a couple of minutes, depending on the seed; it exits 1 and prints
- * the document it happened on. Roughly a third of seeds show it within three
- * million documents, so a clean run says "not this seed, not yet", never "not
- * this Node".
+ * V8 caches the property keys of an object against the keys of the object it
+ * parsed before. A key ending in an escaped backslash poisons that cache, and
+ * the next object with the same preceding key gets the poisoned key back in
+ * place of its own — whatever its own key was, as long as it also ends in an
+ * escape.
  *
- * This is what stood behind WP8's *"a property test failed twice with a
- * counterexample that was not one"*. It is deliberately plain JavaScript with
- * no imports: not TypeScript, not this library, not a test runner, not a
- * dependency. If it named the library, the first question a reader asked would
- * be whether the library is at fault — and answering that question is what the
- * original investigation spent two days on.
+ * This is **already reported**, and it is a V8 bug rather than a Node one:
  *
- * **What goes wrong.** A key that had to be escaped comes back one character
- * short, keeping the backslash and losing what it escaped:
+ * - nodejs/node#63785 — open, labelled `v8 engine`, first reported 2026-06-07
+ *   on Node 24.16.0
+ * - <https://issues.chromium.org/issues/521080746> — the V8 issue it was
+ *   forwarded to on 2026-06-08
+ * - nodejs/node#64546 — an independent second sighting, closed as a duplicate
  *
- *     text written   {"x":null,"\"":{}}     the second key is a double quote
- *     keys read      ["x", "\\"]            the second key is a backslash
+ * We are the third sighting, and the measurements below were added to #63785:
+ * that **only** a key ending in `\\` poisons, that every trailing escape is
+ * vulnerable, that the escape must be the *last* thing in the key, and that a
+ * value is never affected — only a key.
  *
- * Every occurrence seen so far fits one description: the key holds the *raw*
- * characters, cut to the length it would have had *unescaped* — so the two
- * characters `\"` yield `\`, and the three characters `*\"` yield `*\`. Only
- * the double quote shows it in these documents, because the only other escape
- * they contain is `\\`, where the raw first character happens to be the right
- * answer anyway.
- *
- * **What it takes.** Not a particular document: the same text parses correctly
- * ten million times in a fresh process. It needs a long-lived process that has
- * parsed a great many *freshly built* texts — a pool prepared in advance and
- * parsed in a loop does not do it, and neither does one text over and over.
- *
- * Given a seed it is **nearly** reproducible: the same seed usually fails at
- * the same document, and sometimes at another one. What decides is not the
- * document but the history — and everything that changes the history moves the
- * failure without removing it:
- *
- * | | seed 1 | seed 999 |
- * |---|---|---|
- * | as it comes | document 1 107 076 | document 303 372 |
- * | `--jitless` | document 2 142 688 | document 1 338 984 |
- * | `--max-semi-space-size=64` | document 2 142 688 | none in 3 000 000 |
- *
- * The second row is the one that matters: **the compilers are not the cause.**
- * With no just-in-time compilation at all, the fault is still there — later,
- * because everything is slower and the process reaches the same state further
- * along. That was the first suspicion and it is wrong, and it is wrong in the
- * way that costs the most: a short run under `--jitless` passes, and reads
- * exactly like a fix.
- *
- * Giving the young generation room enough that it collects far less often
- * moves the failure the same way — later on seed 1, out of reach on seed 999.
- * So the collector is somewhere in it, and a run that ends before the fault
- * arrives proves nothing at all.
- *
- * **What it means here.** For the library, nothing: no file in `src/` calls
- * `JSON.parse`. The JSON *text* reader in `src/json/text.ts` is this project's
- * own scanner, written because a double cannot carry a decimal — and immune to
- * this for free. What the fault reaches is one property in
+ * **What it means here: nothing.** No file in `src/` calls `JSON.parse`. The
+ * JSON *text* reader in `src/json/text.ts` is this project's own scanner,
+ * written because a double cannot carry a decimal — and immune to this for
+ * free. What the fault reaches is one property in
  * `tests/json/roundtrip.test.ts`, which sends a document through the platform's
  * `JSON.stringify` and `JSON.parse` on purpose, because a caller holding a JSON
  * tree will do exactly that.
  *
- * `MCBOR_REPRO_SEED` and `MCBOR_REPRO_RUNS` change where it looks and for how
- * long. It exits 1 on a hit, so it can be used as a check.
+ * **How it was found, which is the part worth remembering.** Not like this. It
+ * arrived as a property that failed twice under load, with a shrunk
+ * counterexample that passed on replay — because the failing document was never
+ * the cause, only the document unlucky enough to follow a poisoning one. Two
+ * million further executions found nothing, and it was written down as
+ * unexplained. See WORKPLAN.md, WP8, for what it took to get from there to
+ * these two lines.
  */
 
-const SEED = Number.parseInt(process.env['MCBOR_REPRO_SEED'] ?? '', 10) || 1;
-const RUNS = Number.parseInt(process.env['MCBOR_REPRO_RUNS'] ?? '', 10) || 5_000_000;
+const escapes = [
+    ['\\\\',     '\\'],
+    ['\\"',      '"' ],
+    ['\\n',      '\n'],
+    ['\\t',      '\t'],
+    ['\\/',      '/' ],
+    ['\\u0041',  'A' ],
+];
 
-// mulberry32: small, seeded, and no dependency.
-let state = SEED >>> 0;
-const next = () => {
-    state = (state + 0x6D2B79F5) >>> 0;
-    let t = state;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-};
-const pick = (bound) => Math.floor(next() * bound);
+let nth = 0;
 
-// Printable ASCII, which is what the property's own generator produces — and
-// what puts a double quote or a backslash in a key every so often.
-const ALPHABET = [];
-for (let code = 0x20; code <= 0x7E; code++)
-    ALPHABET.push(String.fromCharCode(code));
+/** Parses an object whose second key is `key`, and returns that key back. */
+const read = (first, key) => Object.keys(JSON.parse(`{"${first}":1,"${key}":2}`))[1];
 
-const word = (longest) => {
-    let out = '';
-    const length = 1 + pick(longest);
-    for (let index = 0; index < length; index++)
-        out += ALPHABET[pick(ALPHABET.length)];
-    return out;
-};
+/** Parses an object with the same first key, to leave `key` in the cache. */
+const poison = (first, key) => JSON.parse(`{"${first}":[],"${key}":0}`);
 
-const value = (depth) => {
-    const kind = pick(depth > 2 ? 4 : 7);
-    return kind === 0 ? false
-         : kind === 1 ? null
-         : kind === 2 ? pick(1e9)
-         : kind === 3 ? word(12)
-         : kind === 4 ? []
-         : kind === 5 ? object(depth + 1)
-         :              [value(depth + 1)];
-};
+console.log(`node ${process.version}  v8 ${process.versions.v8}  ${process.platform}/${process.arch}`);
 
-const object = (depth) => {
-    const out   = {};
-    const count = pick(6);
-    for (let index = 0; index < count; index++)
-        out[word(8)] = value(depth);
-    return out;
-};
+let wrong = 0;
 
-console.log(`seed ${SEED}, up to ${RUNS} documents, node ${process.version}`);
+console.log('\nwhich trailing escape poisons which');
+console.log('canary ->' + escapes.map(([source]) => source.padStart(9)).join(''));
 
-for (let run = 0; run < RUNS; run++) {
+for (const [poisonSource, poisonKey] of escapes) {
 
-    const written = object(0);
-    const text    = JSON.stringify(written);
-    const read    = JSON.parse(text);
+    const row = escapes.map(([canarySource, canaryKey]) => {
 
-    const before = Object.keys(written);
-    const after  = Object.keys(read);
+        // A first key of its own per cell, so no cell can disturb another.
+        const first = 'k' + String(nth++);
+        poison(first, poisonSource);
+        const got = read(first, canarySource);
 
-    let same = before.length === after.length;
-    for (let index = 0; same && index < before.length; index++)
-        same = before[index] === after[index];
+        if (got !== canaryKey) wrong++;
 
-    if (!same) {
-        console.log('');
-        console.log(`JSON.parse returned different keys, at document ${run}:`);
-        console.log(`  text written : ${text}`);
-        console.log(`  keys written : ${JSON.stringify(before)}`);
-        console.log(`  keys read    : ${JSON.stringify(after)}`);
-        console.log('');
-        console.log('That text is correct JSON. Reading it in a fresh process gives the right');
-        console.log('keys back, which is why the document is not the cause, and why shrinking');
-        console.log('towards it is wasted effort.');
-        process.exit(1);
-    }
+        return (got === canaryKey ? 'ok' : got === poisonKey ? 'POISON' : 'other').padStart(9);
+
+    });
+
+    console.log(`poison ${poisonSource.padStart(7)}  ${row.join('')}`);
 
 }
 
-console.log(`no divergence in ${RUNS} documents`);
+console.log('\nwhere the escape sits in the key');
+
+for (const key of ['\\"', 'xxxxxxxxxx\\"', '\\"x', 'ab\\"cd']) {
+
+    const first = 'p' + String(nth++);
+    poison(first, key.replace('\\"', '\\\\'));
+
+    const got  = read(first, key);
+    const want = key.replace('\\"', '"');
+
+    console.log(`  key source "${key}"${' '.repeat(14 - key.length)} ${got === want ? 'correct' : 'SUBSTITUTED'}`);
+
+}
+
+console.log('\nthe same escape in a value rather than a key');
+
+for (const first of ['v1', 'v2']) {
+    poison(first, '\\\\');
+    const value = JSON.parse(`{"${first}":1,"k":"\\""}`).k;
+    console.log(`  ${JSON.stringify(value).padEnd(18)} ${value === '"' ? 'correct' : 'SUBSTITUTED'}`);
+}
+
+console.log(wrong === 0
+                ? '\nThis Node reads every key back correctly.'
+                : `\nThis Node loses ${String(wrong)} of ${String(escapes.length ** 2)} keys. See nodejs/node#63785.`);
+
+process.exitCode = wrong === 0 ? 0 : 1;

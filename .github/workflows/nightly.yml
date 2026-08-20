@@ -60,25 +60,24 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
 
-      # WP8: on Node 26.3.0, `JSON.parse` returns an object key one character
-      # short when the key had to be escaped. Nothing in `src/` calls
-      # `JSON.parse`, so the library is not affected and there is nothing here
-      # to fix — which is why this **reports and does not fail**. It exists to
-      # answer the two questions one machine could not: which versions carry
-      # it, and when it goes away again.
+      # WP8: V8 caches an object's property keys against the keys of the object
+      # it parsed before, and a key ending in an escaped backslash poisons that
+      # cache — nodejs/node#63785, forwarded to V8 as issue 521080746. Nothing
+      # in `src/` calls `JSON.parse`, so the library is not affected and there
+      # is nothing here to fix; this **reports and does not fail**. It exists to
+      # answer the two questions one machine could not: which versions carry it,
+      # and when it goes away again.
       #
       # No dependencies are installed. The script has none, deliberately: a
       # demonstration that needs a toolchain is one more thing its reader has
-      # to rule out before believing it.
+      # to rule out before believing it. It is deterministic and takes
+      # milliseconds.
       - name: Does this Node lose an escaped object key?
-        env:
-          MCBOR_REPRO_SEED: ${{ github.run_number }}
-          MCBOR_REPRO_RUNS: '3000000'
         run: |
           if node scripts/v8-json-key-repro.mjs; then
-            echo "\`$(node -v)\`: clean over the documents tried." >> "$GITHUB_STEP_SUMMARY"
+            echo "\`$(node -v)\`: reads every escaped key back correctly." >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "\`$(node -v)\`: **loses an escaped object key** — see WORKPLAN.md, WP8." >> "$GITHUB_STEP_SUMMARY"
+            echo "\`$(node -v)\`: **loses escaped object keys** — nodejs/node#63785, see WORKPLAN.md, WP8." >> "$GITHUB_STEP_SUMMARY"
           fi
 
   coverage:
