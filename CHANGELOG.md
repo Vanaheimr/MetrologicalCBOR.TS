@@ -34,6 +34,21 @@ implementations disagreed. This release implements those decisions.
   — golden encodings, must-reject inputs, text renderings and the exact JSON
   conversion. Like the other specification-bound suites it skips where the
   annex is absent.
+- **A reproducer for a fault in the platform**, not in this library:
+  `scripts/v8-json-key-repro.mjs` shows `JSON.parse` on Node 26.3.0 returning
+  an object key one character short where the key had to be escaped — a key
+  written `"\""` comes back as a lone backslash. It is plain JavaScript with no
+  imports, deliberately: nothing of this library is in it, which is the whole
+  point. Nothing in `src/` calls `JSON.parse` either — the JSON *text* reader
+  here is this project's own scanner — so the library is unaffected. This is
+  what stood behind the property failure listed as unexplained under 0.9.1; see
+  [WORKPLAN.md](WORKPLAN.md), WP8.
+- A nightly job runs that reproducer on Node 20, 22, 24 and latest and
+  **reports rather than fails**, there being nothing here to fix. It answers
+  what one machine could not: which versions carry this, and when it stops.
+- `MCBOR_PROPERTY_RUNS` scales the property suites for a campaign, as
+  `MCBOR_FUZZ_RUNS` already scales the fuzz corpus. Together with the pinned
+  seed it is what turned that fault from a ghost into an afternoon.
 
 ### Changed
 
@@ -63,6 +78,14 @@ implementations disagreed. This release implements those decisions.
   conformance suite: the space between the number and its unit is required
   (`5.0mA` is no longer read as a reading), and stating the same uncertainty
   extension twice (`k=2, k=3`) is an error instead of last-one-wins.
+- **`assertStable` no longer calls a repeating failure a counterexample.** It
+  reports that the failure repeated, and then says what that does and does not
+  mean — a process that has fallen into a fault stays in it and repeats just as
+  faithfully, so repetition is not proof that the input is the cause. The
+  remedy is one line long, *replay the input in a fresh process*, and it was
+  never printed. It is now. On a failure the round-trip property also asks the
+  platform outright, and says `THE PLATFORM LOST IT` where `JSON.parse` did not
+  return what `JSON.stringify` wrote.
 
 ## [0.9.1] — 2026-08-18
 
@@ -131,7 +154,7 @@ freeze declared in 0.9.0 holds.
   job now runs `verify` on a bare clone, deliberately without fetching the
   specification, so the promise the README makes is one something checks.
 
-### Known
+### Known — **since closed, see Unreleased**
 
 - One property in `tests/json/roundtrip.test.ts` has failed twice under load
   with a counterexample that does not reproduce — replaying it passes, and some
@@ -141,6 +164,11 @@ freeze declared in 0.9.0 holds.
   before reporting and says which of the two it is, so the next occurrence is
   diagnostic rather than misleading. **The fault is open**; see WORKPLAN.md,
   WP8, for what has been ruled out.
+
+  *Closed on 2026-08-20, and the diagnosis above is half right. The property is
+  a function of its input; the platform underneath it is not. `JSON.parse`
+  returns an object key one character short where the key had to be escaped —
+  reproduced with no library in sight by `scripts/v8-json-key-repro.mjs`.*
 
 ## [0.9.0] — 2026-08-18
 

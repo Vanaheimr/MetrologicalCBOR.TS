@@ -102,15 +102,53 @@ const anyDocument: fc.Arbitrary<CborValue> = fc.letrec<{ value: CborValue }>(tie
 
 
 /**
+ * What the platform did with this document — printed on a failure, and only
+ * then.
+ *
+ * The second property sends the tree through `JSON.stringify` and `JSON.parse`
+ * on purpose, because a caller holding a JSON tree will do exactly that. That
+ * gives a failure here two possible authors, and one of them is not this
+ * library: WP8 was `JSON.parse` returning an object key one character short,
+ * and every hour spent on the document was an hour spent on the wrong suspect.
+ * So the message asks the platform outright rather than leaving the reader to
+ * suspect the nearest code.
+ *
+ * A clean answer does **not** clear the platform. The fault comes and goes with
+ * the state of the process and this runs after the fact, so it can miss. A
+ * dirty answer is conclusive.
+ */
+const platformCheck = (bytes: Uint8Array): string => {
+
+    const written = JSON.stringify(mcborToJson(bytes));
+    const read    = JSON.stringify(JSON.parse(written) as unknown);
+
+    return written === read
+               ? 'JSON.parse gave back what JSON.stringify wrote — on this attempt, which does ' +
+                 'not clear it; see scripts/v8-json-key-repro.mjs'
+               : 'THE PLATFORM LOST IT — JSON.parse did not give back what JSON.stringify ' +
+                 'wrote, so this is not a defect of this library.\n' +
+                 `    written: ${written}\n` +
+                 `    read:    ${read}`;
+
+};
+
+
+/**
  * These use {@link assertStable} rather than a bare `expect`.
  *
  * Not for style: the second of them failed twice on a loaded machine and its
  * reported counterexample passed on replay, after some two million further
  * executions found nothing. A property-based tool shrinks towards whatever
- * happened to fail, so an unstable execution is reported as a minimal
- * counterexample that is not one — which is the most misleading output a test
- * can produce. `assertStable` repeats the computation before it reports, and
- * says which of the two it is. See WORKPLAN.md, WP8.
+ * happened to fail, so a failure the input did not cause is reported as a
+ * minimal counterexample that is not one — the most misleading output a test
+ * can produce.
+ *
+ * `assertStable` repeats the computation before it reports. Asking that one
+ * question is what closed WP8: the answer was *yes, twice, identically*, and
+ * a failure that repeats inside one process and vanishes in the next is about
+ * the process. It was `JSON.parse`. See WORKPLAN.md, WP8, and
+ * `scripts/v8-json-key-repro.mjs`, which shows it in plain JavaScript with
+ * nothing of this library in it.
  */
 describe('the profile round-trips', () => {
 
@@ -142,7 +180,7 @@ describe('the profile round-trips', () => {
                         return bytesToHex(jsonToMcbor(again));
                     },
                     bytesToHex(bytes),
-                    () => bytesToHex(bytes),
+                    () => `${bytesToHex(bytes)}\n  platform: ${platformCheck(bytes)}`,
                 );
 
             }),

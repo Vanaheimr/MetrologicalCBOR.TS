@@ -47,6 +47,19 @@ export default tseslint.config(
   },
 
   {
+    // Plain JavaScript on purpose, and outside the TypeScript project on
+    // purpose. `scripts/v8-json-key-repro.mjs` demonstrates a fault in the
+    // platform rather than in anything written here, and a demonstration that
+    // has to be compiled first is one more thing its reader has to rule out.
+    // There are no types to check, so the typed rules are switched off rather
+    // than made to fail on a file they were never given.
+    files:   ['**/*.mjs'],
+    extends: [tseslint.configs.disableTypeChecked],
+    languageOptions: { parserOptions: { projectService: false, project: null } },
+    rules:   { 'no-console': 'off' },
+  },
+
+  {
     // Section 3.1 of the specification forbids binary floating point numbers in
     // metrological values, and Section 3.2 requires exact rational arithmetic on
     // unit exponents. Neither is expressible in an IEEE 754 double, so these

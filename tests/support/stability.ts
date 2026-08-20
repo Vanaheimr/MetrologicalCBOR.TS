@@ -33,6 +33,15 @@
  * So this asks it. The assertion fails either way, because a failure is a
  * failure; what changes is that the message says which kind it is, and prints
  * enough to replay the input directly rather than through the generator.
+ *
+ * The answer, when the fault came back, was **yes — twice, identically**, and
+ * that answer is what solved it. "Stable" had been read as "the input is the
+ * cause", and it is not: the same input passed in a fresh process. A failure
+ * that repeats within one process and vanishes in the next is a statement
+ * about the process — here, `JSON.parse` returning a wrong object key, which
+ * `scripts/v8-json-key-repro.mjs` shows with no library in sight. Hence the
+ * wording below, which says what was measured rather than what a repeated
+ * failure is usually taken to mean.
  */
 
 
@@ -57,12 +66,31 @@ export const PROPERTY_SEED: number = (() => {
 
 
 /**
+ * How much larger than usual this run is, for a campaign.
+ *
+ * `MCBOR_PROPERTY_RUNS` **scales** each property's own count rather than
+ * replacing it, which is the difference between a sweep and a distortion: the
+ * three properties here were given different counts on purpose, and a flat
+ * override would silently make the cheap ones as expensive as the dear one
+ * while telling nobody. A multiplier keeps the proportions and still lets an
+ * investigation ask for a hundred times the search.
+ *
+ * It exists because the open fault under WP8 needs volume that no push should
+ * pay for. One is the default, so an ordinary run is untouched.
+ */
+export const PROPERTY_SCALE: number = (() => {
+    const stated = Number.parseFloat(process.env['MCBOR_PROPERTY_RUNS'] ?? '');
+    return Number.isFinite(stated) && stated > 0 ? stated : 1;
+})();
+
+
+/**
  * fast-check options for a property that has to stay reproducible.
  *
- * @param numRuns How many cases to run.
+ * @param numRuns How many cases to run, before {@link PROPERTY_SCALE}.
  */
 export function reproducibly(numRuns: number): { numRuns: number; seed: number } {
-    return { numRuns, seed: PROPERTY_SEED };
+    return { numRuns: Math.max(1, Math.round(numRuns * PROPERTY_SCALE)), seed: PROPERTY_SEED };
 }
 
 
@@ -113,13 +141,17 @@ const alike = (left: Outcome, right: Outcome): boolean =>
  * computation that throws once and succeeds on repetition is telling you about
  * the run rather than about the value.
  *
+ * Note what "stable" does and does not claim. It says the failure repeats
+ * *inside this process*, which is what makes it worth reading; it does not say
+ * the input caused it. WP8 is the standing example of the difference.
+ *
  * @param compute  The computation under test. Must be repeatable.
  * @param expected What it should produce.
  * @param subject  How to describe the input, evaluated only on failure — a
  *                 hexadecimal encoding, so the case can be replayed by hand.
  *
  * @throws {Error} where `compute()` does not return `expected`, with a message
- *         distinguishing a genuine counterexample from an unstable execution.
+ *         saying whether the failure repeated, and what each answer means.
  */
 export function assertStable(compute:  () => string,
                              expected: string,
@@ -140,7 +172,12 @@ export function assertStable(compute:  () => string,
 
     throw new Error(
         stable
-            ? 'The input is a counterexample: it fails the same way twice.\n' +
+            ? 'REPEATED FAILURE: it fails the same way twice. That makes the value below ' +
+              'worth reading — but it does not make the value the cause. A process that has ' +
+              'fallen into a fault stays in it and repeats just as faithfully, which is what ' +
+              'WP8 turned out to be. **Replay the input in a fresh process**: if it fails ' +
+              'there too it is a counterexample, and if it passes there the cause is the run ' +
+              'rather than the value, whatever the repetition suggests.\n' +
               `  input:    ${subject()}\n` +
               `  produced: ${shown(first)}\n` +
               `  expected: ${expected}\n` +
@@ -153,8 +190,7 @@ export function assertStable(compute:  () => string,
               `  first:    ${shown(first)}\n` +
               `  repeated: ${shown(second)}\n` +
               `  expected: ${expected}\n` +
-              `  seed:     ${PROPERTY_SEED}\n` +
-              '  See WORKPLAN.md, WP8, for what has already been ruled out.',
+              `  seed:     ${PROPERTY_SEED}`,
     );
 
 }

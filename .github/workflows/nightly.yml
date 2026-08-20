@@ -44,6 +44,43 @@ jobs:
         env:
           MCBOR_PROPERTY_SEED: ${{ github.run_number }}
 
+  platform:
+    name: Platform JSON check on Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20', '22', '24', 'latest']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      # WP8: on Node 26.3.0, `JSON.parse` returns an object key one character
+      # short when the key had to be escaped. Nothing in `src/` calls
+      # `JSON.parse`, so the library is not affected and there is nothing here
+      # to fix — which is why this **reports and does not fail**. It exists to
+      # answer the two questions one machine could not: which versions carry
+      # it, and when it goes away again.
+      #
+      # No dependencies are installed. The script has none, deliberately: a
+      # demonstration that needs a toolchain is one more thing its reader has
+      # to rule out before believing it.
+      - name: Does this Node lose an escaped object key?
+        env:
+          MCBOR_REPRO_SEED: ${{ github.run_number }}
+          MCBOR_REPRO_RUNS: '3000000'
+        run: |
+          if node scripts/v8-json-key-repro.mjs; then
+            echo "\`$(node -v)\`: clean over the documents tried." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "\`$(node -v)\`: **loses an escaped object key** — see WORKPLAN.md, WP8." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
   coverage:
     name: Coverage
     runs-on: ubuntu-latest

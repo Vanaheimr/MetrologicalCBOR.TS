@@ -58,10 +58,13 @@ describe('assertStable', () => {
 
     });
 
-    it('calls a repeatable mismatch a counterexample', () => {
+    it('calls a repeatable mismatch a repeated failure, not a counterexample', () => {
 
+        // The wording matters, and WP8 is why. A failure that repeats is worth
+        // reading; it is not thereby explained by its input, and saying so in
+        // the message is what stops the next investigation reading it that way.
         expect(() => assertStable(scripted('beef', 'beef'), 'abcd', () => 'input'))
-            .toThrowError(/is a counterexample: it fails the same way twice/);
+            .toThrowError(/REPEATED FAILURE: it fails the same way twice/);
 
     });
 
@@ -90,10 +93,10 @@ describe('assertStable', () => {
 
     });
 
-    it('calls a repeatable throw a counterexample', () => {
+    it('calls a repeatable throw a repeated failure too', () => {
 
         expect(() => assertStable(scripted(new Error('boom'), new Error('boom')), 'abcd', () => 'input'))
-            .toThrowError(/is a counterexample: it fails the same way twice/);
+            .toThrowError(/REPEATED FAILURE: it fails the same way twice/);
 
     });
 
