@@ -291,3 +291,143 @@ describe('string escapes', () => {
     });
 
 });
+
+
+/**
+ * The tag rows of the conversion table.
+ *
+ * `metrological-text.md` Section 3.1 has a row per tag saying what it becomes
+ * in JSON, and this module implements them as one branch each. Coverage found
+ * them unexecuted, and a scan of every vector in the conformance project found
+ * six of the rows in no vector either — so a normative table had rows that
+ * nothing verified anywhere.
+ *
+ * These are one-way conversions: a UUID becomes a string and comes back a
+ * string. What makes them checkable at all is that the specification
+ * prescribes the text.
+ *
+ * Where a row departs from RFC 8949 Section 6.1 — which the specification names
+ * as its base, and which is explicitly non-normative advice aimed at lossy
+ * display — the test says so, because an implementation following 6.1
+ * faithfully would disagree.
+ */
+describe('the tag rows of the conversion table', () => {
+
+    it('tag 0 passes through as the string it wraps', () => {
+        expect(jsonOf('C074323032362D30382D32305430353A30303A30305A'))
+            .toBe('"2026-08-20T05:00:00Z"');
+    });
+
+    it('tag 1 becomes the instant, not the number', () => {
+        // RFC 8949 Section 6.1 would ignore the tag and give 1765792440. A
+        // number that used to be a time is a number, and nothing downstream
+        // can tell it from a count.
+        expect(jsonOf('C11A693FDAB8')).toBe('"2025-12-15T09:54:00.000Z"');
+    });
+
+    it('tag 37 becomes a UUID rather than base64', () => {
+        // Section 6.1 would ignore the tag and base64url the byte string.
+        expect(jsonOf('D82550F81D4FAE7DEC11D0A76500A0C91E6BF6'))
+            .toBe('"f81d4fae-7dec-11d0-a765-00a0c91e6bf6"');
+    });
+
+    it.each([
+        ['tag 32, a URI',       'D820782868747470733A2F2F6578616D706C652E636F6D2F6D657465722F3149534130303030303030303432',
+                                '"https://example.com/meter/1ISA0000000042"'],
+        ['tag 33, base64url',   'D8216F534756736247385F64323979624751', '"SGVsbG8_d29ybGQ"'],
+        ['tag 34, base64',      'D82270534756736247382F643239796247513D', '"SGVsbG8/d29ybGQ="'],
+        ['tag 36, MIME',        'D824781C5375626A6563743A2072656164696E670D0A0D0A312E3130206B5768',
+                                String.raw`"Subject: reading\r\n\r\n1.10 kWh"`],
+    ])('%s carries its text through unchanged', (_what, hex, json) => {
+        expect(jsonOf(hex)).toBe(json);
+    });
+
+    it('tag 55799 is transparent', () => {
+        // It says "these bytes are CBOR", which JSON has no use for — and it
+        // is the tag most likely to be at the front of a file, so refusing it
+        // would refuse the document rather than a field.
+        expect(jsonOf('D9D9F7A1616E01')).toBe('{"n":1}');
+    });
+
+    it('a document-level decimal fraction spends its scale', () => {
+        // Inside a reading a non-negative exponent is forbidden, so this
+        // branch is reachable only by a tag 4 at document level. Section 6.1
+        // would give the two-element array the tag wraps.
+        expect(jsonOf('C4820005')).toBe('5');
+        expect(jsonOf('C4820201')).toBe('100');
+    });
+
+    it('refuses a tag this profile does not carry', () => {
+        // The sharpest departure in the table: Section 6.1 ignores the tag
+        // number and represents the content, so it would quietly yield 1 and
+        // lose the fact that the 1 meant something.
+        expect(codeOf(() => jsonOf('D903E701'))).toBe('ERR_JSON_UNSUPPORTED');
+    });
+
+    it('lets a caller decide what an unknown tag becomes', () => {
+        const json = mcborToJsonText(hexToBytes('D903E701'), {
+            onUnknownTag: tag => `tag ${tag.toString()}`,
+        });
+        expect(json).toBe('"tag 999"');
+    });
+
+});
+
+
+/**
+ * The two rows of the table that are options rather than defaults.
+ *
+ * Section 3.1 says a byte string becomes "Base64URL (default), Base64 or
+ * lowercase hex", and that a non-text map key "is an error unless
+ * stringification is asked for". Both alternatives belong to the table and
+ * neither had ever been executed. The conformance suite does not reach them
+ * either, and correctly so: it compares what the two implementations do with
+ * no options at all, which is the only thing two libraries can be held to.
+ */
+describe('the conversion options', () => {
+
+    // 0x01 0x02 0x03 0xFB — the last byte is chosen so that the base64url
+    // alphabet shows the character it spells differently from base64.
+    const BYTES = '4401020 3FB'.replace(/ /g, '');
+
+    it('writes a byte string as unpadded base64url by default', () => {
+        // Which is what RFC 8949 §6.1 advises, and one of the few rows where
+        // this profile and that advice coincide exactly.
+        expect(jsonOf(BYTES)).toBe('"AQID-w"');
+    });
+
+    it('writes it as lowercase hex on request', () => {
+        expect(mcborToJsonText(hexToBytes(BYTES), { bytes: 'hex' })).toBe('"010203fb"');
+    });
+
+    it('refuses it altogether where the caller asked for that', () => {
+        expect(codeOf(() => mcborToJsonText(hexToBytes(BYTES), { bytes: 'error' })))
+            .toBe('ERR_JSON_UNSUPPORTED');
+    });
+
+    it('refuses a non-text map key by default', () => {
+        // A JSON member is named by a string, so anything else has to be
+        // rendered — and rendering it invents a name the document never had.
+        expect(codeOf(() => jsonOf('A10102'))).toBe('ERR_JSON_KEY');
+    });
+
+    it('renders a non-text map key in diagnostic notation on request', () => {
+
+        const stringify = (hex: string) =>
+            mcborToJsonText(hexToBytes(hex), { mapKeys: 'stringify' });
+
+        expect(stringify('A10102')).toBe(`{"1":2}`);
+        expect(stringify('A1F502')).toBe(`{"true":2}`);
+        expect(stringify('A1F602')).toBe(`{"null":2}`);
+        expect(stringify('A142010202')).toBe(`{"h'0102'":2}`);
+
+    });
+
+    it('still refuses a key that diagnostic notation cannot name either', () => {
+        // An array as a key: renderable in principle, and a name nobody could
+        // map back to the key it came from.
+        expect(codeOf(() => mcborToJsonText(hexToBytes('A18101 02'.replace(/ /g, '')),
+                                            { mapKeys: 'stringify' }))).toBe('ERR_JSON_KEY');
+    });
+
+});
