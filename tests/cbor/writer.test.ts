@@ -261,6 +261,37 @@ describe('byte strings and text', () => {
 
     });
 
+    it('write a surrogate pair as the one character it denotes', () => {
+
+        // The pair is two UTF-16 code units and one character; the check for
+        // unpaired surrogates has to step over it rather than trip on it.
+        expect(encodeToHex(text('\uD83D\uDE00'))).toBe('64F09F9880');
+
+    });
+
+    it('refuse an unpaired surrogate instead of substituting one', () => {
+
+        // `TextEncoder` replaces a lone surrogate with U+FFFD rather than
+        // failing. Accepting that would make this the one place in the library
+        // that silently changes what it was given - and the reader refuses a
+        // text string that is not valid UTF-8, so a writer that quietly
+        // rewrites one is the same fault from the other side. Worse, in fact:
+        // a substitution made on the way out travels under whatever signature
+        // is applied next.
+        expect(codeOf(() => encode(text('\uD800')))).toBe('ERR_CBOR_UNENCODABLE');
+        expect(codeOf(() => encode(text('\uDC00')))).toBe('ERR_CBOR_UNENCODABLE');
+        expect(codeOf(() => encode(text('a\uD800b')))).toBe('ERR_CBOR_UNENCODABLE');
+
+        // A high surrogate at the very end, where the lookahead runs off the
+        // string rather than finding a low one.
+        expect(codeOf(() => encode(text('ok\uD83D')))).toBe('ERR_CBOR_UNENCODABLE');
+
+        // Two high surrogates in a row: the first is unpaired even though a
+        // surrogate follows it.
+        expect(codeOf(() => encode(text('\uD83D\uD83D')))).toBe('ERR_CBOR_UNENCODABLE');
+
+    });
+
     it('count text in UTF-8 bytes rather than in characters', () => {
 
         // Four characters, ten bytes.

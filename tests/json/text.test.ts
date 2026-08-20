@@ -269,15 +269,24 @@ describe('string escapes', () => {
 
     });
 
-    it('replaces a lone surrogate rather than refusing it', () => {
+    it('refuses a lone surrogate rather than replacing it', () => {
 
-        // Recorded rather than endorsed. RFC 8259 Section 8.2 leaves unpaired
-        // surrogates to the implementation and UTF-8 cannot carry one, so the
-        // substitution below is what encoding produces — but silently changing
-        // a character sits awkwardly beside this library's habit of refusing
-        // what it cannot represent. The conformance suite carries the same case,
-        // so that the C# reference implementation has to answer it too.
-        expect(hexOf('"\\uD800"')).toBe('63EFBFBD');   // U+FFFD
+        // RFC 8259 Section 8.2 leaves unpaired surrogates to the implementation
+        // and UTF-8 cannot carry one, so there is no rule to follow here — only
+        // a choice. This library refuses, because the alternative is to write a
+        // character nobody asked for: `TextEncoder` substitutes U+FFFD, and a
+        // substitution made on the way out travels under whatever signature is
+        // applied next.
+        //
+        // The refusal comes from the CBOR writer rather than from this reader,
+        // so every path that writes text inherits it. The C# reference
+        // implementation refuses the same input, and the conformance suite
+        // holds the two to it.
+        expect(codeOf(() => hexOf('"\uD800"'))).toBe('ERR_CBOR_UNENCODABLE');
+        expect(codeOf(() => hexOf('"\uDC00"'))).toBe('ERR_CBOR_UNENCODABLE');
+
+        // A well-formed pair is untouched by the check.
+        expect(hexOf('"\uD83D\uDE00"')).toBe('64F09F9880');
 
     });
 

@@ -131,7 +131,7 @@ class ByteWriter {
 
             case 'int':       this.#writeInt(value.value);                       break;
             case 'bytes':     this.#writeString(2, value.value);                 break;
-            case 'text':      this.#writeString(3, encoder.encode(value.value)); break;
+            case 'text':      this.#writeText(value.value);                       break;
             case 'bool':      this.#byte(value.value ? 0xF5 : 0xF4);             break;
             case 'null':      this.#byte(0xF6);                                  break;
             case 'undefined': this.#byte(0xF7);                                  break;
@@ -216,6 +216,54 @@ class ByteWriter {
 
 
     // -- Strings ------------------------------------------------------------
+
+    /**
+     * A text string, refused where UTF-8 cannot carry it.
+     *
+     * `TextEncoder` replaces an unpaired surrogate with U+FFFD rather than
+     * failing, which would make this the one place in the library that
+     * silently changes what it was given. The reader already refuses a text
+     * string that is not valid UTF-8; a writer that quietly rewrites one is
+     * the same fault from the other side, and the worse of the two, because a
+     * substitution made on the way out travels under whatever signature is
+     * applied next.
+     *
+     * A caller holding an unpaired surrogate holds a broken string, and should
+     * hear about it here — where the surrounding code still knows where it
+     * came from — rather than discover a replacement character downstream.
+     */
+    #writeText(value: string): void {
+
+        for (let index = 0; index < value.length; index++) {
+
+            const unit = value.charCodeAt(index);
+
+            if (unit < 0xD800 || unit > 0xDFFF)
+                continue;
+
+            // A high surrogate has to be followed by a low one; a low one may
+            // never arrive on its own. `charCodeAt` past the end gives NaN,
+            // which fails the comparison, so the end of the string is covered.
+            if (unit <= 0xDBFF) {
+                const low = value.charCodeAt(index + 1);
+                if (low >= 0xDC00 && low <= 0xDFFF) {
+                    index++;
+                    continue;
+                }
+            }
+
+            throw new CborError(
+                'ERR_CBOR_UNENCODABLE',
+                `The text string holds an unpaired surrogate (0x${unit.toString(16).toUpperCase()} ` +
+                `at index ${index}), which UTF-8 cannot carry.`,
+            );
+
+        }
+
+        this.#writeString(3, encoder.encode(value));
+
+    }
+
 
     #writeString(major: number, bytes: Uint8Array): void {
         this.#head(major, BigInt(bytes.length));
