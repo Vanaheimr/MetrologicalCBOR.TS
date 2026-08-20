@@ -144,3 +144,141 @@ describe('the exact round trip', () => {
     });
 
 });
+
+
+/**
+ * String escapes, in both directions.
+ *
+ * Writing them is `JSON.stringify`'s job and correct by construction. *Reading*
+ * them is not: this module carries its own JSON reader, because JavaScript's
+ * own one rounds 2^53+1 to 2^53 before any library sees a digit — and a
+ * hand-written reader means a hand-written unescaper, sixty lines of switch
+ * that until now no test had ever executed. It is on the critical path: this is
+ * the module the cross-implementation conformance suite runs its JSON suites
+ * through.
+ */
+describe('string escapes', () => {
+
+    describe('are read', () => {
+
+        it.each([
+            ['quote',           '"\\""',   '6122'],
+            ['backslash',       '"\\\\"',  '615C'],
+            ['solidus',         '"\\/"',   '612F'],
+            ['backspace',       '"\\b"',   '6108'],
+            ['form feed',       '"\\f"',   '610C'],
+            ['line feed',       '"\\n"',   '610A'],
+            ['carriage return', '"\\r"',   '610D'],
+            ['tab',             '"\\t"',   '6109'],
+        ])('%s', (_what, json, hex) => {
+            expect(hexOf(json)).toBe(hex);
+        });
+
+        it('all eight in one string, in the order written', () => {
+            expect(hexOf('"\\"\\\\\\/\\b\\f\\n\\r\\t"')).toBe('68225C2F080C0A0D09');
+        });
+
+        it('takes the hex digits of a unicode escape in either case', () => {
+            expect(hexOf('"\\u0041"')).toBe('6141');
+            expect(hexOf('"\\u00e4"')).toBe('62C3A4');
+            expect(hexOf('"\\u00E4"')).toBe('62C3A4');
+            expect(hexOf('"\\u20AC"')).toBe('63E282AC');
+        });
+
+        it('reads an escaped NUL, which is a character and not a terminator', () => {
+            // A reader that treats NUL as the end of something loses the rest
+            // of the document without saying so.
+            expect(hexOf('"\\u0000"')).toBe('6100');
+        });
+
+        it('joins a surrogate pair into the one character it denotes', () => {
+            // U+1F600 arrives as two escapes and has to leave as four UTF-8
+            // bytes, not as two three-byte sequences.
+            expect(hexOf('"\\uD83D\\uDE00"')).toBe('64F09F9880');
+        });
+
+        it('unescapes map names as well as values', () => {
+            expect(hexOf('{"a\\nb":1}')).toBe('A163610A6201');
+        });
+
+    });
+
+    describe('are refused where malformed', () => {
+
+        it.each([
+            ['a unicode escape with fewer than four digits', '"\\u12"'],
+            ['a unicode escape with a non-hexadecimal digit', '"\\uZZZZ"'],
+            ['an escape that is not one',                     '"\\x"'],
+            ['a backslash at the end of the text',            '"\\'],
+            ['a string that never closes',                    '"abc'],
+            ['an unescaped newline',                          '"a\nb"'],
+        ])('%s', (_what, json) => {
+            expect(codeOf(() => hexOf(json))).toBe('ERR_JSON_TYPE');
+        });
+
+    });
+
+        it('an unescaped control character', () => {
+            // Built rather than written into the table above: a raw U+0001
+            // does not survive being typed into a source file.
+            expect(codeOf(() => hexOf(`"a${String.fromCharCode(1)}b"`))).toBe('ERR_JSON_TYPE');
+        });
+
+    describe('are written', () => {
+
+        it.each([
+            ['quote',           '6122', '"\\""'],
+            ['backslash',       '615C', '"\\\\"'],
+            ['backspace',       '6108', '"\\b"'],
+            ['form feed',       '610C', '"\\f"'],
+            ['line feed',       '610A', '"\\n"'],
+            ['carriage return', '610D', '"\\r"'],
+            ['tab',             '6109', '"\\t"'],
+            ['U+0001',          '6101', '"\\u0001"'],
+            ['NUL',             '6100', '"\\u0000"'],
+        ])('%s', (_what, hex, json) => {
+            expect(jsonOf(hex)).toBe(json);
+        });
+
+        it('leaves the solidus alone, and still reads it escaped', () => {
+            // JSON permits "\/" and requires nobody to write it. Writing it
+            // plain while accepting both spellings is what every other reader
+            // does; the asymmetry is deliberate rather than an oversight.
+            expect(jsonOf('612F')).toBe('"/"');
+            expect(hexOf('"\\/"')).toBe('612F');
+        });
+
+        it('writes characters above ASCII as themselves', () => {
+            expect(jsonOf('62C3A4')).toBe('"ä"');
+            expect(jsonOf('64F09F9880')).toBe('"😀"');
+        });
+
+    });
+
+    describe('survive the round trip', () => {
+
+        it.each([
+            '68225C2F080C0A0D09',   // quote, backslash, solidus, BS, FF, LF, CR, tab
+            '6100',                 // NUL
+            '6101',                 // U+0001
+            '64F09F9880',           // an astral character
+            'A163610A6201',         // an escape in a map name
+        ])('%s', hex => {
+            expect(hexOf(jsonOf(hex))).toBe(hex);
+        });
+
+    });
+
+    it('replaces a lone surrogate rather than refusing it', () => {
+
+        // Recorded rather than endorsed. RFC 8259 Section 8.2 leaves unpaired
+        // surrogates to the implementation and UTF-8 cannot carry one, so the
+        // substitution below is what encoding produces — but silently changing
+        // a character sits awkwardly beside this library's habit of refusing
+        // what it cannot represent. The conformance suite carries the same case,
+        // so that the C# reference implementation has to answer it too.
+        expect(hexOf('"\\uD800"')).toBe('63EFBFBD');   // U+FFFD
+
+    });
+
+});
