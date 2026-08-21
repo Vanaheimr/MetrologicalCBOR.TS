@@ -383,7 +383,16 @@ The three key identifiers are recomputed as well, as RFC 9679 thumbprints over t
 
   **What changed here.** `assertStable` no longer calls a repeating failure a counterexample. It repeats the computation, says so, and then says what that does and does not mean — because "it fails the same way twice" was read as "the input is the cause", and it is not: a poisoned cache repeats just as faithfully as a real defect. The remedy is one line long — replay the input in a fresh process — and it was never printed. On a failure the property now also asks the platform directly and says `THE PLATFORM LOST IT` where `JSON.parse` did not return what `JSON.stringify` wrote, which is conclusive when it fires; a clean answer does not clear the platform, because the cache is poisoned per shape and that check runs after the fact.
 
-  A nightly job runs the reproducer on Node 20, 22, 24 and latest and **reports rather than fails**, since there is nothing here to fix. It answers the two questions one machine could not: which versions carry this, and when it goes away again.
+  A nightly job runs the reproducer on Node 20, 22, 24 and latest and **reports rather than fails**, since there is nothing here to fix. It exists to answer the two questions one machine could not: which versions carry this, and when it goes away again. Its first run answered the first — `ubuntu-latest` x64, a fresh process per version:
+
+  | Node | V8 | result |
+  |---|---|---|
+  | v20.20.2 | 11.3.244.8 | reads every key back correctly |
+  | v22.23.2 | 12.4.254.21 | reads every key back correctly |
+  | v24.19.0 | 13.6.233.17 | **loses 5 of 36 keys** |
+  | v26.7.0 | 14.6.202.34 | **loses 5 of 36 keys** |
+
+  Five of the six trailing escapes are substituted; the sixth is the `\\` that does the poisoning, where the wrong answer happens to be the right one. Two things follow. It is **not fixed on the current line** — v26.7.0 was the newest release that day. And the break falls between **V8 12.4 and 13.6**, which brackets it to the 22 → 24 jump rather than to anything recent. Added to [nodejs/node#63785](https://github.com/nodejs/node/issues/63785), where the thread held single data points and a guess about 20 and 22.
 
 - **ECDSA's low-S convention is a real interoperability trap.** The meter signs without normalising `s`, and several libraries — noble among them — reject a high-S signature by default under an anti-malleability policy that Bitcoin made conventional and COSE does not impose. Four hours of "the signature is wrong" is one `lowS: false` away from "the signature is fine", and the failure looks exactly like a bad encoder. Named in the example and in `examples/README.md`.
 - **The build wrote `sourceMappingURL` twice** into every bundle, once itself and once through esbuild. Harmless, and wrong in an artifact that goes to a registry and stays there. `scripts/finish-build.ts` keeps one, and a test asserts it.
