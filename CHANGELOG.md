@@ -5,8 +5,9 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-Until 1.0.0 the public API may change in minor releases. Version 1.0.0 is gated
-on the IANA registration of tag 44252 — see [WORKPLAN.md](WORKPLAN.md), WP8.
+Until 1.0.0 the public API may change in minor releases. The one thing 1.0.0
+was waiting on is done: IANA registered tag 44252 on 2026-08-19 — see
+[WORKPLAN.md](WORKPLAN.md), WP8.
 
 ## [Unreleased]
 
@@ -67,6 +68,14 @@ implementations disagreed. This release implements those decisions.
 
 ### Changed
 
+- **Tag 44252 is registered with IANA**, assigned 2026-08-19. Everything that
+  called it pending says so now. Section 8 of the specification quotes the
+  entry as published rather than the request that was sent, and the two are not
+  word for word: the registry reads *quantity **value** with unit of measure,
+  SI prefix and **GUM** measurement uncertainty*. Both differences are
+  improvements, and the registry is the authority for that line. No code
+  changed — the number lives in one constant, `METROLOGICAL_VALUE_TAG`, and the
+  contingency that constant existed for never arose.
 - **The canonical text output follows metrological-text.md**: integer unit
   exponents are written with a caret (`9.81 m·s^-2`; superscripts remain
   accepted input), the explicit scale is `×10^3` (superscript scale remains

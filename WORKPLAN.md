@@ -339,7 +339,7 @@ Every property in those suites has the form "if it was accepted, then …", whic
 
 - README (badges, quick start, API overview, spec link, ChargyCore-style layout), typedoc API docs, examples incl. the optional COSE verification demo (`@noble/curves` as dev-dependency in `examples/` only).
 - Release process rehearsal: `0.1.0` after WP4, `0.2.0` after WP5, `0.3.0` after WP6, `0.9.0` API freeze after WP7.
-- **v1.0.0 gate:** the IANA registration of tag 44252 is recorded (spec: "the numeric identifications … become permanent with the IANA registration"). The tag number lives in exactly one constant, mirroring the spec's own guidance, in case 44252 is taken first.
+- **v1.0.0 gate — met on 2026-08-19:** IANA assigned tag 44252 (spec: "the numeric identifications … become permanent with the IANA registration"). The tag number lives in exactly one constant, mirroring the spec's own guidance in case 44252 were taken first; it was not, and 44252 is the only assignment between 43002 and 49999. The published semantics differs slightly from the request that was sent — *quantity **value*** and ***GUM** measurement uncertainty* — and specification §8 now quotes the registry rather than the draft.
 - **Acceptance:** met but for the last step, which is the maintainer's: the release workflow is rehearsed with `npm publish --dry-run`, its tarball asserted by a test, and the bundle exercised in a browser-only context. **Nothing is published.** The tag has been pushed and the workflow has run — and failed ahead of the `Publish` step every time, for the three reasons recorded below, so `npm publish` has never executed and no version of this package exists on npm. [docs/releasing.md](docs/releasing.md) is what a successful one takes.
 
 **The COSE demo, which was open question 6, is worth the dependency**
@@ -464,7 +464,7 @@ CI matrix: Node 20/22/24; bundle smoke test in a headless browser (Vitest browse
 | Runtime deps | pinned, minimal | **zero** |
 | License | AGPL-3.0-only | **Apache-2.0** + NOTICE + SPDX headers |
 
-Versioning: SemVer; 0.x during WP4–WP7 (published early — real feedback beats private polish); API freeze at 0.9.0; 1.0.0 gated on the IANA registration (§5 WP8). `CHANGELOG.md` per keep-a-changelog.
+Versioning: SemVer; 0.x during WP4–WP7 (published early — real feedback beats private polish); API freeze at 0.9.0; 1.0.0 gated on the IANA registration (§5 WP8), which was recorded on 2026-08-19. `CHANGELOG.md` per keep-a-changelog.
 
 ---
 
@@ -489,7 +489,7 @@ Total ≈ **24–36 focused person-days** (the table shows mid-range). Calendar 
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| Tag 44252 taken at IANA before registration | number change | tag number in exactly one constant (spec anticipates this); v1.0.0 gated on registration |
+| Tag 44252 taken at IANA before registration | number change | **closed:** registered 2026-08-19, the only assignment between 43002 and 49999. The insurance — the number in exactly one constant — was never called on, and is now just where the number lives |
 | Spec-internal id contradictions propagate into code | wrong wire data — worst case for metrology | **closed:** errata corrected upstream and locally; registry generated from one validated data file; a test fetched into CI parses the spec and compares both directions |
 | Text grammar ambiguities (`dB` → deci-byte; prose strings that parse as values) | silent misinterpretation | unit-symbol-first tokenization, strict anchored grammar, ambiguity fixture table, `paths`/`schema-only` escape hatches, documented pitfalls |
 | Unicode homoglyphs (µ/μ, Ω/Ω) and superscripts | parse failures or duplicated spellings | NFC + explicit homoglyph normalization in the grammar, fixture-tested |

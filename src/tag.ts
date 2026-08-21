@@ -19,14 +19,16 @@
  * The CBOR tag number of a metrological value: a quantity value with its unit
  * of measure, SI prefix and GUM measurement uncertainty.
  *
- * 44252 (`0xACDC`) lies in the First Come First Served range of the IANA
- * registry "Concise Binary Object Representation (CBOR) Tags"
- * ({@link https://www.rfc-editor.org/rfc/rfc8949 | RFC 8949}, Section 9.2).
+ * 44252 (`0xACDC`) is **registered** in the IANA registry "Concise Binary
+ * Object Representation (CBOR) Tags"
+ * ({@link https://www.rfc-editor.org/rfc/rfc8949 | RFC 8949}, Section 9.2),
+ * assigned on 2026-08-19 under that registry's First Come First Served policy
+ * ({@link https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml | the registry}).
  *
  * This constant is the only place in the code base where the number appears.
- * Should IANA report 44252 as taken before the registration is recorded,
- * changing this line, the specification and the golden vectors is the whole
- * of the change.
+ * That was insurance against IANA reporting 44252 as taken before the
+ * registration was recorded — it was not, so the insurance was never called
+ * on, and this is now simply where the number lives.
  *
  * @see {@link https://github.com/Vanaheimr/MetrologicalCBOR.TS/blob/master/spec/README.md | The specification}, Section 8
  */

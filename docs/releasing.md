@@ -67,17 +67,20 @@ do not publish.
 
 ## Before 1.0.0
 
-Version 1.0.0 is gated on one thing that is not in this repository: the **IANA
+Version 1.0.0 waited on one thing that is not in this repository: the **IANA
 registration of tag 44252**. The specification says the numeric identifications
-become permanent with it, and until they are permanent this library should not
-promise that its API is.
+become permanent with it, and until they were permanent this library had no
+business promising that its API is.
 
-The tag number lives in exactly one constant, [src/tag.ts](../src/tag.ts),
-mirroring the specification's own guidance — if 44252 is taken before the
-registration completes, one line changes and every test that reads the constant
-follows.
+**That is done.** IANA assigned 44252 on **2026-08-19** under the registry's
+First Come First Served policy —
+<https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml>. The tag number
+still lives in exactly one constant, [src/tag.ts](../src/tag.ts), mirroring the
+specification's own guidance; the contingency it existed for — the number being
+taken first — never arose, and the constant is now simply where the number
+lives.
 
-When the registration is recorded:
+What 1.0.0 takes, whenever it is made:
 
 - set the version to `1.0.0` and say in the changelog what the registration is;
 - state in the README that the API is stable and that breaking changes now need
@@ -94,7 +97,7 @@ When the registration is recorded:
 | 0.9.0 | hardening, fuzzing and the conformance matrix — the API freeze (WP7) |
 | 0.9.1 | documentation, examples and the release machinery (WP8) |
 | 0.10.0 | the specification's conformance decisions — **the first version on npm** |
-| 1.0.0 | gated on the IANA registration |
+| 1.0.0 | not made; the IANA registration it waited on was recorded 2026-08-19 |
 
 Everything up to and including 0.9.1 was tagged in this changelog and in the git
 history and never left the repository. 0.10.0 is the first that did. Three

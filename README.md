@@ -47,10 +47,10 @@ output changes shape and some encodings 0.9.x accepted are now refused.
 | WP8 — Documentation, examples and release | done — **v0.9.1** |
 | Cross-implementation conformance | done — **v0.10.0** |
 
-Version 1.0.0 is gated on the IANA registration of the tag, which is the point
-at which the numeric unit identifications become permanent. Until then the
-public API may change in minor releases — though it is frozen as of 0.9.0, and
-nothing is expected to. See [docs/releasing.md](docs/releasing.md).
+The tag is **registered**: IANA assigned 44252 on 2026-08-19, which is the
+point at which the numeric unit identifications became permanent. That was the
+one thing 1.0.0 was waiting on; the API itself has been frozen since 0.9.0 and
+has not moved. See [docs/releasing.md](docs/releasing.md).
 
 ## Installation
 
