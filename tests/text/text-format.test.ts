@@ -34,6 +34,9 @@ import { fromSuperscript, toSuperscript } from '../../src/text/symbols.js';
 import { UnitRegistry }          from '../../src/registry/index.js';
 import { Units }                 from '../../src/registry/units.generated.js';
 import { codeOf }                from '../support/errors.js';
+import { decimal }               from '../../src/model/decimal.js';
+import { metrologicalValue }     from '../../src/model/value.js';
+import { unitById }              from '../../src/model/unit.js';
 
 const MICRO_SIGN     = 'µ';
 const GREEK_SMALL_MU = 'μ';
@@ -115,6 +118,23 @@ describe('the decimal scale', () => {
         expect(codeOf(() => decodeMetrologicalValue(hexToBytes('D9ACDC82C482000504')))).toBe('ERR_VALUE_TYPE');
     });
 
+    it('refuses to write a model that holds one, and can still render it', () => {
+
+        // The model is deliberately wider than the wire: `decimal` checks that
+        // the exponent is an integer in range and no more, so a caller can hold
+        // 5e2 in memory. What refuses is the encoder, at the moment the value
+        // would become bytes — which is the only place refusing helps.
+        const scaled = metrologicalValue({ value: decimal(5n, 2), unit: unitById(4) });
+
+        expect(codeOf(() => encodeMetrologicalValue(scaled))).toBe('ERR_VALUE_TYPE');
+
+        // And the renderer keeps the scientific form for it, because a model
+        // that cannot be written can still be shown — in an error message
+        // about itself, most of all.
+        expect(formatMetrologicalValue(scaled)).toBe('5e2 A');
+
+    });
+
 });
 
 
@@ -124,6 +144,15 @@ describe('prefixes', () => {
         expect(textOf(bytesOf('5.0 mA'))).toBe('5.0 mA');
         expect(textOf(bytesOf('1.10 kWh'))).toBe('1.10 kWh');
         expect(textOf(bytesOf(`21.5 m${DEGREE_CELSIUS}`))).toBe(`21.5 m${DEGREE_CELSIUS}`);
+    });
+
+    it('never fold onto a symbol that already carries a power', () => {
+        // The registry holds m² and m³ as symbols of their own, so "cm²" could
+        // be read as centi·m² (10⁻⁴ m²) or as (cm)² (10⁻⁴ m² as well, by
+        // coincidence) — and "dm³" as deci·m³ or (dm)³, which differ. The
+        // resolver declines to guess for either.
+        expect(codeOf(() => parseMetrologicalValue('5 cm²'))).toBe('ERR_TEXT_SYNTAX');
+        expect(codeOf(() => parseMetrologicalValue('5 dm³'))).toBe('ERR_TEXT_SYNTAX');
     });
 
     it('are folded onto the leading factor of a product', () => {
@@ -472,6 +501,24 @@ describe('the pieces the format is assembled from', () => {
 
     it('resolves nothing from an empty token', () => {
         expect(tryResolveUnitToken('', UnitRegistry.standard, true)).toBeUndefined();
+    });
+
+    it('resolves nothing where the prefix would fold onto a powered symbol', () => {
+
+        // The registry holds m² and m³ as symbols of their own, so this is
+        // the one place a prefix could attach to a symbol that already carries
+        // a power. It is a different guard from the one on a factor's
+        // *exponent*: parsing "5 cm²" never reaches here, because the
+        // tokenizer splits the superscript off as an exponent first and the
+        // exponent guard rejects it. This is the resolver's own answer, asked
+        // of it directly.
+        expect(tryResolveUnitToken('cm²', UnitRegistry.standard, true)).toBeUndefined();
+        expect(tryResolveUnitToken('dam³', UnitRegistry.standard, true)).toBeUndefined();
+
+        // The bare powered symbols still resolve, and without a prefix.
+        expect(tryResolveUnitToken('m²', UnitRegistry.standard, true)?.unit.symbol).toBe('m²');
+        expect(tryResolveUnitToken('m³', UnitRegistry.standard, true)?.prefix).toBe(0);
+
     });
 
 });

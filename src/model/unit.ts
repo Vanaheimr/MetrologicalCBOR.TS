@@ -106,6 +106,10 @@ function greatestCommonDivisor(left: number, right: number): number {
         b = next;
     }
 
+    // The 1 is unreachable: `a` ends at zero only if both arguments were, and
+    // a rational exponent with a numerator of zero is rejected before it can
+    // be reduced. Returning 1 rather than dividing by zero is what the caller
+    // would need if that ever changed.
     return a === 0 ? 1 : a;
 
 }

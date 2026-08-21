@@ -197,6 +197,9 @@ class ByteReader {
             case 6:
                 return this.#readTag(argument, depth, start);
 
+            // Unreachable, and kept: `major` is one byte shifted right by
+            // five, so it is 0..7, and 7 returned above. This is what would
+            // catch a change to either of those two facts.
             default:
                 throw this.#malformed(`Unknown major type ${String(major)}.`, start);
 

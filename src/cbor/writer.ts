@@ -420,6 +420,10 @@ class ByteWriter {
             this.#uint(argument, 8);
         }
 
+        // Unreachable, and kept: every caller bounds its argument first - a
+        // tag is checked against MAX_UINT64, an integer above it becomes a
+        // bignum, and the lengths of arrays, maps and strings cannot approach
+        // 2^64. This is what would catch a caller that stops doing so.
         else
             throw new CborError('ERR_CBOR_UNENCODABLE',
                                 `The argument ${String(argument)} does not fit in a CBOR head.`);
@@ -513,6 +517,10 @@ export function toHalfBits(value: number): number | undefined {
     const exponent = (bits >>> 23) & 0xFF;
     const mantissa = bits & 0x7F_FFFF;
 
+    // The `undefined` arm is unreachable: an exponent of 0xFF with a mantissa
+    // is a NaN, and NaN left above - twice, once by `Number.isNaN` and once
+    // because it never compares equal to itself. Infinity is what actually
+    // arrives here.
     if (exponent === 0xFF)
         return mantissa === 0 ? sign | 0x7C00 : undefined;
 
