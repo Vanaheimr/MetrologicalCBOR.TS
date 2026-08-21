@@ -21,9 +21,9 @@ never heard of the tag still sees a well-formed array of standard numbers.
 
 ## Status
 
-**0.10.0 — agreed with the other implementation, and waiting on IANA.** mCBOR is
-read and written, all ten examples of specification Section 5 byte for byte, a
-whole document travels through JSON with every measurement intact,
+**0.10.0 — agreed with the other implementation, and the tag is registered.**
+mCBOR is read and written, all ten examples of specification Section 5 byte for
+byte, a whole document travels through JSON with every measurement intact,
 [docs/conformance.md](docs/conformance.md) maps every normative clause to the
 code that enforces it and the test that proves it, and the four signatures over
 the specification's worked record verify against bytes this library produced.
