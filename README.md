@@ -304,9 +304,22 @@ and [what counts as a vulnerability](https://github.com/Vanaheimr/MetrologicalCB
 in a library that parses signed, legally relevant measurement data.
 
 
+## Publishing
+
+```
+npm version 0.10.0 --no-git-tag-version
+npm run verify
+npm pack --dry-run
+npm pack
+npm login
+npm whoami
+npm publish
+```
+
+
 ## Related
 
-- IANA [CBOR tag 44252](https://www.iana.org/assignments/cbor-tags) assignment, 2026-08-19
+- IANA [CBOR tag 44252](https://www.iana.org/assignments/cbor-tags) assignment
 - The official [Metrological CBOR Specification](https://github.com/OpenChargingTechnology/Whitepapers/tree/master/MetrologicalCBOR) on GitHub.
 - [C# reference implementation](https://github.com/Vanaheimr/Styx/tree/master/Styx/Illias/CBOR) of the Metrological CBOR specification.
 - [Cross-Implementation Conformance Test Suite](https://github.com/Vanaheimr/MCBORConformanceTests)
@@ -318,6 +331,6 @@ in a library that parses signed, legally relevant measurement data.
 
 ## License
 
-Apache License 2.0 — see [LICENSE](https://github.com/Vanaheimr/MetrologicalCBOR.TS/blob/master/LICENSE) and [NOTICE](https://github.com/Vanaheimr/MetrologicalCBOR.TS/blob/master/NOTICE).
+[Apache License 2.0](https://github.com/Vanaheimr/MetrologicalCBOR.TS/blob/master/LICENSE) and [NOTICE](https://github.com/Vanaheimr/MetrologicalCBOR.TS/blob/master/NOTICE).
 
 Copyright 2026 GraphDefined GmbH
