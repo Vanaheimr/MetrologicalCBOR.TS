@@ -23,7 +23,7 @@ never heard of the tag still sees a well-formed array of standard numbers.
 ## Current Status
 
 - IANA assigned [CBOR tag 44252](https://www.iana.org/assignments/cbor-tags) on 2026-08-19.
-- [docs/conformance.md](docs/conformance.md) maps every normative clause to the
+- [docs/conformance.md](https://github.com/Vanaheimr/MetrologicalCBOR.TS/blob/master/docs/conformance.md) maps every normative clause to the
 code that enforces it and the test that proves it, and the four signatures over
 the specification's worked record verify against bytes this library produced.
 - [Cross-Implementation Conformance Test Suite](https://github.com/Vanaheimr/MCBORConformanceTests)
@@ -123,7 +123,7 @@ parseMetrologicalValue('9.81 m·s⁻²');        // and 'm*s^-2'
 This is a second encoding rather than a pretty-printing: what is written reads
 back to the same bytes, which is what will let a whole document travel through
 JSON with every measurement intact. The grammar is
-[docs/text-format.md](docs/text-format.md).
+[docs/text-format.md](https://github.com/Vanaheimr/MetrologicalCBOR.TS/blob/master/docs/text-format.md).
 
 Two of its rules exist because a generated reading found them missing. A prefix
 is folded into a symbol only where the result reads back as the same unit —
@@ -213,7 +213,7 @@ const extended = registry.withPrivateUnits({
 The library does no cryptography and never will. Signing belongs to COSE, and a
 data format that also carried a crypto stack would be unusable as the leaf of
 somebody else's schema. What the library does is produce the bytes a signature
-is over, exactly — and [examples/06](examples/06-verify-a-signed-record.ts)
+is over, exactly — and [examples/06](https://github.com/Vanaheimr/MetrologicalCBOR.TS/blob/master/examples/06-verify-a-signed-record.ts)
 checks that against the specification's own worked record:
 
 ```
@@ -233,7 +233,7 @@ byte, which a construction differing by one byte could not do.
 
 ## Examples
 
-Six runnable programs, in [examples/](examples/README.md):
+Six runnable programs, in [examples/](https://github.com/Vanaheimr/MetrologicalCBOR.TS/blob/master/examples/README.md):
 
 ```bash
 npx tsx examples/01-a-reading.ts
@@ -268,65 +268,45 @@ and compares it with the registry in both directions — table rows, alias list,
 affine marker, SenML mappings and the unit-factor examples — so the two cannot
 silently drift apart.
 
-## Development
+## Working on it
 
 ```bash
-npm ci
-npm run verify
+git clone https://github.com/Vanaheimr/MetrologicalCBOR.TS.git
+cd MetrologicalCBOR.TS && npm ci && npm run verify
 ```
 
-`verify` runs the registry check, the type checker, the linter, the tests and
-the build — the same sequence as CI.
+`verify` is the one definition of what is checked — registry, types, lint,
+build, tests, API documentation — and it is what CI runs, so a green run on
+your machine means the same thing as a green run there.
 
-The fuzz suites are sized by an environment variable, because a pull request
-and a nightly run can afford different things:
+The fuzz suites take an environment variable, because a pull request and a
+nightly run can afford different things:
 
 ```bash
 MCBOR_FUZZ_RUNS=200000 npm run test:fuzz
 ```
 
-Two hundred thousand cases per property is what the nightly workflow runs.
-Everything that survived it is in [docs/conformance.md](docs/conformance.md),
-together with what the fuzzing found and where every requirement of the
-specification went.
+Two hundred thousand cases per property is the nightly figure. What survived it,
+and where every normative requirement of the specification went, is in
+[docs/conformance.md](https://github.com/Vanaheimr/MetrologicalCBOR.TS/blob/master/docs/conformance.md).
 
 The specification lives in
 [its own repository](https://github.com/OpenChargingTechnology/Whitepapers/tree/master/MetrologicalCBOR)
-and is not committed here. Fetch it to run the conformance comparison; without
-it those tests skip rather than fail.
+and is not committed here — `npm run fetch:spec` retrieves it, and the suites
+that compare against it skip rather than fail where it is absent.
 
-```bash
-npm run fetch:spec
-```
-
-CI does this before every test run.
-
-`npm run docs:api` builds the API reference into `docs/api`.
-
-See [docs/conformance.md](docs/conformance.md) for the clause-by-clause matrix,
-[docs/text-format.md](docs/text-format.md) for the text grammar,
-[docs/releasing.md](docs/releasing.md) for what publishing takes,
-[CONTRIBUTING.md](CONTRIBUTING.md) for the rules that are not negotiable,
-and [SECURITY.md](SECURITY.md) for what counts as a vulnerability in a library
-that parses signed, legally relevant measurement data.
-
-
-## Publishing
-
-```
-npm version 0.10.0 --no-git-tag-version
-npm run verify
-npm pack --dry-run
-npm pack
-npm login
-npm whoami
-npm publish
-```
+Further reading, all of it in the repository:
+[the conformance matrix](https://github.com/Vanaheimr/MetrologicalCBOR.TS/blob/master/docs/conformance.md),
+[the text grammar](https://github.com/Vanaheimr/MetrologicalCBOR.TS/blob/master/docs/text-format.md),
+[what a release takes](https://github.com/Vanaheimr/MetrologicalCBOR.TS/blob/master/docs/releasing.md),
+[the rules that are not negotiable](https://github.com/Vanaheimr/MetrologicalCBOR.TS/blob/master/CONTRIBUTING.md),
+and [what counts as a vulnerability](https://github.com/Vanaheimr/MetrologicalCBOR.TS/blob/master/SECURITY.md)
+in a library that parses signed, legally relevant measurement data.
 
 
 ## Related
 
-- IANA [CBOR tag 44252](https://www.iana.org/assignments/cbor-tags) assigment
+- IANA [CBOR tag 44252](https://www.iana.org/assignments/cbor-tags) assignment, 2026-08-19
 - The official [Metrological CBOR Specification](https://github.com/OpenChargingTechnology/Whitepapers/tree/master/MetrologicalCBOR) on GitHub.
 - [C# reference implementation](https://github.com/Vanaheimr/Styx/tree/master/Styx/Illias/CBOR) of the Metrological CBOR specification.
 - [Cross-Implementation Conformance Test Suite](https://github.com/Vanaheimr/MCBORConformanceTests)
@@ -338,6 +318,6 @@ npm publish
 
 ## License
 
-Apache License 2.0 — see [LICENSE](LICENSE) and [NOTICE](NOTICE).
+Apache License 2.0 — see [LICENSE](https://github.com/Vanaheimr/MetrologicalCBOR.TS/blob/master/LICENSE) and [NOTICE](https://github.com/Vanaheimr/MetrologicalCBOR.TS/blob/master/NOTICE).
 
 Copyright 2026 GraphDefined GmbH
