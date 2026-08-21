@@ -1,15 +1,15 @@
-# Metrological CBOR (mCBOR) for TypeScript
+# Metrological CBOR for TypeScript
 
 [![CI](https://github.com/Vanaheimr/MetrologicalCBOR.TS/actions/workflows/ci.yml/badge.svg)](https://github.com/Vanaheimr/MetrologicalCBOR.TS/actions/workflows/ci.yml)
 [![Nightly](https://github.com/Vanaheimr/MetrologicalCBOR.TS/actions/workflows/nightly.yml/badge.svg)](https://github.com/Vanaheimr/MetrologicalCBOR.TS/actions/workflows/nightly.yml)
 [![npm](https://img.shields.io/npm/v/@vanaheimr/metrological-cbor.svg)](https://www.npmjs.com/package/@vanaheimr/metrological-cbor)
-[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-The reference implementation of **CBOR tag 44252** for TypeScript: a compact,
-signable binary representation of a measured physical quantity.
+A reference implementation of [Metrological CBOR (Tag 44252)](https://github.com/OpenChargingTechnology/Whitepapers/tree/master/MetrologicalCBOR) for TypeScript: a compact, signable binary representation of a measured physical quantity with unit of measure, SI prefix and GUM measurement uncertainty.
 
 ```
-44252([4([-1, 50]), 4, -3])        ->  5.0 mA        (9 bytes on the wire)
+44252([4([-1, 50]), 4, -3])                     ->  5.0 mA
+
+D9ACDC 84 C482211959D8 05 00 A201C482210C0202   -> (230.00 ±0.12) V, k=2	
 ```
 
 A bare `230` is meaningless without "volt". A reading of `1.10 kWh` says more
@@ -19,38 +19,17 @@ speaking, not a measurement result at all. Tag 44252 carries all three — unit,
 exact decimal scale and GUM uncertainty — while a generic CBOR decoder that has
 never heard of the tag still sees a well-formed array of standard numbers.
 
-## Status
 
-**0.10.0 — agreed with the other implementation, and the tag is registered.**
-mCBOR is read and written, all ten examples of specification Section 5 byte for
-byte, a whole document travels through JSON with every measurement intact,
-[docs/conformance.md](docs/conformance.md) maps every normative clause to the
+## Current Status
+
+- IANA assigned [CBOR tag 44252](https://www.iana.org/assignments/cbor-tags) on 2026-08-19.
+- [docs/conformance.md](docs/conformance.md) maps every normative clause to the
 code that enforces it and the test that proves it, and the four signatures over
 the specification's worked record verify against bytes this library produced.
+- [Cross-Implementation Conformance Test Suite](https://github.com/Vanaheimr/MCBORConformanceTests)
+then compared this library against the [C# reference implementation](https://github.com/Vanaheimr/Styx/tree/master/Styx/Illias/CBOR), and the
+[specification](https://github.com/OpenChargingTechnology/Whitepapers/tree/master/MetrologicalCBOR) decided every point on which the two disagreed.
 
-The [cross-implementation conformance suite](https://github.com/Vanaheimr/MCBORConformanceTests)
-then compared this library against the C# reference implementation, and the
-specification decided every point on which the two disagreed. 0.10.0 implements
-those decisions, which is why it is a minor and not a patch: the canonical text
-output changes shape and some encodings 0.9.x accepted are now refused.
-
-| Work package | State |
-|---|---|
-| WP0 — Scaffolding: build, tests, lint, CI, license | done |
-| WP1 — Unit registry from specification Section 4 | done |
-| WP2 — Minimal deterministic CBOR core | done |
-| WP3 — Domain model and validation | done |
-| WP4 — Tag 44252 codec | done — **v0.1.0** |
-| WP5 — Text format: grammar, renderer, parser | done — **v0.2.0** |
-| WP6 — Document-level CBOR/JSON conversion | done — **v0.3.0** |
-| WP7 — Hardening and conformance | done — **v0.9.0** |
-| WP8 — Documentation, examples and release | done — **v0.9.1** |
-| Cross-implementation conformance | done — **v0.10.0** |
-
-The tag is **registered**: IANA assigned 44252 on 2026-08-19, which is the
-point at which the numeric unit identifications became permanent. That was the
-one thing 1.0.0 was waiting on; the API itself has been frozen since 0.9.0 and
-has not moved. See [docs/releasing.md](docs/releasing.md).
 
 ## Installation
 
@@ -331,13 +310,31 @@ See [docs/conformance.md](docs/conformance.md) for the clause-by-clause matrix,
 and [SECURITY.md](SECURITY.md) for what counts as a vulnerability in a library
 that parses signed, legally relevant measurement data.
 
+
+## Publishing
+
+```
+npm version 0.10.0 --no-git-tag-version
+npm run verify
+npm pack --dry-run
+npm pack
+npm login
+npm whoami
+npm publish
+```
+
+
 ## Related
 
-- **[Vanaheimr Styx CBOR](https://github.com/Vanaheimr/Styx/tree/master/Styx/Illias/CBOR)** — the C# reference implementation of the same tag
-- **[ChargyCore.TS](https://github.com/OpenChargingCloud/ChargyCore.TS)** — transparency software for e-mobility charging processes
-- [RFC 8949](https://www.rfc-editor.org/rfc/rfc8949) — CBOR
-- [RFC 9052](https://www.rfc-editor.org/rfc/rfc9052) — COSE, for signing the result
-- [GUM](https://www.bipm.org/en/committees/jc/jcgm/publications) (JCGM 100:2008) — the expression of uncertainty in measurement
+- IANA [CBOR tag 44252](https://www.iana.org/assignments/cbor-tags) assigment
+- The official [Metrological CBOR Specification](https://github.com/OpenChargingTechnology/Whitepapers/tree/master/MetrologicalCBOR) on GitHub.
+- [C# reference implementation](https://github.com/Vanaheimr/Styx/tree/master/Styx/Illias/CBOR) of the Metrological CBOR specification.
+- [Cross-Implementation Conformance Test Suite](https://github.com/Vanaheimr/MCBORConformanceTests)
+- [RFC 8949](https://www.rfc-editor.org/rfc/rfc8949) CBOR specification
+- [RFC 9052](https://www.rfc-editor.org/rfc/rfc9052) COSE specification for signing the result
+- [SI Digital Framework](https://si-digital-framework.org) Digital references for FAIR measurement data
+- [Guide to the Expression of Uncertainty in Measurement](https://www.bipm.org/en/committees/jc/jcgm/publications) (GUM, JCGM 100:2008)
+- [ChargyCore.TS](https://github.com/OpenChargingCloud/ChargyCore.TS) transparency software for e-mobility charging processes using this software library
 
 ## License
 
