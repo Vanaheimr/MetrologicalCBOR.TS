@@ -21,12 +21,18 @@ never heard of the tag still sees a well-formed array of standard numbers.
 
 ## Status
 
-**0.9.1 — finished, and waiting on IANA.** mCBOR is read and written, all ten
-examples of specification Section 5 byte for byte, a whole document travels
-through JSON with every measurement intact,
+**0.10.0 — agreed with the other implementation, and waiting on IANA.** mCBOR is
+read and written, all ten examples of specification Section 5 byte for byte, a
+whole document travels through JSON with every measurement intact,
 [docs/conformance.md](docs/conformance.md) maps every normative clause to the
 code that enforces it and the test that proves it, and the four signatures over
 the specification's worked record verify against bytes this library produced.
+
+The [cross-implementation conformance suite](https://github.com/Vanaheimr/MCBORConformanceTests)
+then compared this library against the C# reference implementation, and the
+specification decided every point on which the two disagreed. 0.10.0 implements
+those decisions, which is why it is a minor and not a patch: the canonical text
+output changes shape and some encodings 0.9.x accepted are now refused.
 
 | Work package | State |
 |---|---|
@@ -39,6 +45,7 @@ the specification's worked record verify against bytes this library produced.
 | WP6 — Document-level CBOR/JSON conversion | done — **v0.3.0** |
 | WP7 — Hardening and conformance | done — **v0.9.0** |
 | WP8 — Documentation, examples and release | done — **v0.9.1** |
+| Cross-implementation conformance | done — **v0.10.0** |
 
 Version 1.0.0 is gated on the IANA registration of the tag, which is the point
 at which the numeric unit identifications become permanent. Until then the

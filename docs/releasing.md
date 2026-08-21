@@ -58,7 +58,7 @@ if you have changed the `files` manifest, that test is what tells you.
 Then:
 
 ```bash
-git tag -s v0.9.1 -m "v0.9.1" && git push origin v0.9.1
+git tag -s v0.10.0 -m "v0.10.0" && git push origin v0.10.0
 ```
 
 A signed tag, because the tag is what authorises the publish. Pushing it to
@@ -93,8 +93,12 @@ When the registration is recorded:
 | 0.3.0 | documents between CBOR and JSON (WP6) |
 | 0.9.0 | hardening, fuzzing and the conformance matrix — the API freeze (WP7) |
 | 0.9.1 | documentation, examples and the release machinery (WP8) |
+| 0.10.0 | the specification's conformance decisions — **the first version on npm** |
 | 1.0.0 | gated on the IANA registration |
 
-None of these has been published to npm. They are tagged in the changelog and in
-the git history; the registry is still empty, and the first `git push --tags` is
-what changes that.
+Everything up to and including 0.9.1 was tagged in this changelog and in the git
+history and never left the repository. 0.10.0 is the first that did. Three
+attempts at 0.9.1 failed ahead of the publish step, for the three reasons
+recorded in [WORKPLAN.md](../WORKPLAN.md) under WP8 — read them before cutting
+the next one, because all three were a check that CI ran and `npm run verify`
+did not.

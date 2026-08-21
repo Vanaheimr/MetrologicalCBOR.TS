@@ -10,6 +10,16 @@ on the IANA registration of tag 44252 — see [WORKPLAN.md](WORKPLAN.md), WP8.
 
 ## [Unreleased]
 
+## [0.10.0] — 2026-08-21
+
+**The first version published to npm.** Everything through 0.9.1 was tagged in
+this changelog and in the git history and never left the repository; this is the
+release that does.
+
+A minor rather than a patch, and deliberately: the canonical text output changes
+shape, and encodings that 0.9.x accepted are now refused. Under 0.x that is what
+a minor number is for.
+
 The [cross-implementation conformance suite](https://github.com/Vanaheimr/MCBORConformanceTests)
 compared this library against the C# reference implementation and the
 specification, and the specification decided every point on which the two
