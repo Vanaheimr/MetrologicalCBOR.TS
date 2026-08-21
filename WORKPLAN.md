@@ -340,7 +340,7 @@ Every property in those suites has the form "if it was accepted, then …", whic
 - README (badges, quick start, API overview, spec link, ChargyCore-style layout), typedoc API docs, examples incl. the optional COSE verification demo (`@noble/curves` as dev-dependency in `examples/` only).
 - Release process rehearsal: `0.1.0` after WP4, `0.2.0` after WP5, `0.3.0` after WP6, `0.9.0` API freeze after WP7.
 - **v1.0.0 gate:** the IANA registration of tag 44252 is recorded (spec: "the numeric identifications … become permanent with the IANA registration"). The tag number lives in exactly one constant, mirroring the spec's own guidance, in case 44252 is taken first.
-- **Acceptance:** met but for the last step, which is the maintainer's: the release workflow is rehearsed with `npm publish --dry-run` and its tarball asserted by a test, and the bundle is exercised in a browser-only context. **`npm publish` itself has not been run** — no version of this package is on npm, and the first `git push --tags` is what changes that. [docs/releasing.md](docs/releasing.md) is what it takes.
+- **Acceptance:** met but for the last step, which is the maintainer's: the release workflow is rehearsed with `npm publish --dry-run`, its tarball asserted by a test, and the bundle exercised in a browser-only context. **Nothing is published.** The tag has been pushed and the workflow has run — and failed ahead of the `Publish` step every time, for the three reasons recorded below, so `npm publish` has never executed and no version of this package exists on npm. [docs/releasing.md](docs/releasing.md) is what a successful one takes.
 
 **The COSE demo, which was open question 6, is worth the dependency**
 
@@ -350,7 +350,9 @@ The three key identifiers are recomputed as well, as RFC 9679 thumbprints over t
 
 `@noble/curves` lives in `examples/package.json` rather than the root, so a root `npm ci` never installs a cryptography library to test a data format. Without it the example says so and exits cleanly, and its test skips; a CI job installs it and runs the example for real.
 
-**Findings**- **The property test was right all along: the fault is in `JSON.parse`.** Closed 2026-08-20. `tests/json/roundtrip.test.ts`, *the JSON survives being written and read as text*, failed twice under load with a shrunk counterexample that passed on replay; two million further executions found nothing; it was recorded as "not a function of its input" with the cause unknown. That last sentence was true of the wrong layer. The property is a function of its input. The platform underneath it is not.
+**Findings**
+
+- **The property test was right all along: the fault is in `JSON.parse`.** Closed 2026-08-20. `tests/json/roundtrip.test.ts`, *the JSON survives being written and read as text*, failed twice under load with a shrunk counterexample that passed on replay; two million further executions found nothing; it was recorded as "not a function of its input" with the cause unknown. That last sentence was true of the wrong layer. The property is a function of its input. The platform underneath it is not.
 
   **What it is**, in two lines and no dependencies:
 
@@ -386,6 +388,26 @@ The three key identifiers are recomputed as well, as RFC 9679 thumbprints over t
 - **The build wrote `sourceMappingURL` twice** into every bundle, once itself and once through esbuild. Harmless, and wrong in an artifact that goes to a registry and stays there. `scripts/finish-build.ts` keeps one, and a test asserts it.
 - **The published package would have carried the generated API reference** — 272 files of HTML, tripling the tarball — because the `files` manifest named `docs` wholesale. It names `docs/*.md` now, and `tests/bundle.test.ts` asserts the whole shape of what would be published rather than trusting the manifest.
 - **`npm run verify` built after it tested**, so the bundle test would have skipped in CI, which is the one place it matters. Build now comes first.
+
+**Three failed release attempts, and all of them one cause**
+
+The tag was pushed and the release workflow failed three times before it ran a step that published anything. No version reached npm; the `Publish` step never executed, because `Verify` failed ahead of it each time. The three faults were unrelated to each other and every one of them had the same shape: **a check that CI performed and `npm run verify` did not, or that nothing performed at all.** Each was invisible on a maintainer's machine and only on a maintainer's machine.
+
+| # | What failed | Why it could not be seen locally |
+|---|---|---|
+| 1 | `tsc --noEmit` on `examples/`, which imports `@noble/curves` | The root `tsconfig.json` included `examples/`, whose dependency the root package deliberately does not have. `verify` passed only where `npm install --prefix examples` had been run — that is, on the machine that wrote it |
+| 2 | `typedoc`, on a README link pointing at the `examples/` directory rather than a file | `docs:api` was a CI step and not part of `verify`, so the link was added *after* the last local documentation build and nothing re-ran it |
+| 3 | `tests/codec/section5-vectors.test.ts`, `ENOENT` on `spec/README.md` | The suite is written to skip where the specification is absent, but `it.each` needs its cases at *collection* time and a suite is collected even when it is about to be skipped, so the read ran before the skip. CI fetches the specification first and the release workflow does not, and the working copy had been lying about since WP1 |
+
+The third is the interesting one, and the most expensive: the guard was *present and correct-looking*. `describe.skipIf(!PRESENT)` suppresses the tests; it does not suppress the collection that builds them. Reading the file inside that `describe` therefore guarded nothing at all. The table is read once outside it now and yields nothing where the document is absent, which is the same nothing the skip would have produced, arrived at without opening a file that is not there.
+
+**What changed as a result**
+
+- **`npm run verify` is the one definition of what is checked**, and the CI job runs it rather than restating its parts beside it. Twice a check lived in the workflow file alone; both times the gap stayed invisible until a release failed.
+- **A CI job runs `verify` on a bare clone**, deliberately without fetching the specification. The README promises a fresh clone can run it, and nothing enforced that promise: the matrix job fetches first, so the path was never exercised except on a tag push, which is the worst possible place to discover it.
+- **The examples are type-checked where their dependency lives** — `npm run typecheck:examples`, run by the CI job that installs them. It is the one check that cannot join `verify`, because a contributor who has not installed a cryptography library must still be able to verify a data format. [docs/releasing.md](docs/releasing.md) names it as a step before the tag rather than after it.
+
+The lesson is not "test more". It is that **a green `verify` must mean the same thing everywhere**, and that every divergence between what a developer runs and what CI runs is a defect waiting for the least convenient moment — which, for a release workflow, is the only moment it has.
 
 **Decisions taken here**
 
@@ -475,6 +497,7 @@ Total ≈ **24–36 focused person-days** (the table shows mid-range). Calendar 
 | JSON consumers mangling big numbers | data corruption outside our API | numbers > 2⁵³−1 become strings by default; documented |
 | Own CBOR core bugs | correctness | **closed:** RFC 8949 Appendix A vectors, the worked example end to end, every one- and two-byte input enumerated rather than sampled, and 200 000 mutated-and-random cases per property in the nightly run; 100 % branch coverage on `codec/` and `text/`, 99.5 % overall with three named unreachable guards |
 | A defect that only a signature would reveal | a signed document that no longer verifies | **mitigated:** the strict decoder's accepted set and its encodable set are asserted to be the same set, over mutated golden vectors. This is what caught the unreduced rational exponent in WP7 |
+| A green `verify` that means different things in different places | a defect that surfaces only at release, which is the worst moment it has | **mitigated after it happened three times in WP8:** `npm run verify` is the one definition and the CI job runs it rather than restating its parts; a CI job runs it on a bare clone with no specification fetched, which nothing exercised before; the one check that cannot join it — the examples, which need a dependency the library refuses to have — is named in [docs/releasing.md](docs/releasing.md) as a step before the tag |
 
 ---
 
