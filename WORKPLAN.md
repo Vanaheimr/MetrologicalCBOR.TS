@@ -28,7 +28,7 @@ Build the reference implementation of CBOR tag 44252 for the TypeScript/JavaScri
 - A specified text grammar (own document) + renderer + parser.
 - Document-level JSON conversion in both directions.
 - Conformance test suite: golden vectors from spec §5, the worked signed example, property-based round-trips, a negative test per normative MUST.
-- NPM publishing with provenance, dual ESM/CJS output, browser + Node.
+- NPM publishing, dual ESM/CJS output, browser + Node. *(Revised after WP8: publishing is a hand operation with MFA and no credential lives in the repository — npm provenance is given up with it, for the reasons in [docs/releasing.md](docs/releasing.md).)*
 
 ### Out of scope (deliberately, matching spec §6a)
 
@@ -151,7 +151,7 @@ MetrologicalCBOR.TS/
 ├─ docs/             # text-format.md (grammar), conformance.md (matrix), typedoc output
 ├─ examples/         # usage snippets; optional COSE verification demo (dev-only deps)
 ├─ spec/             # the normative specification (already present)
-└─ .github/workflows # ci.yml, nightly.yml, release.yml
+└─ .github/workflows # ci.yml, nightly.yml, tag.yml
 ```
 
 ### Public API sketch
@@ -192,6 +192,7 @@ Estimates are focused person-days for one senior TypeScript developer, including
 - `git init`, Apache-2.0 `LICENSE` + `NOTICE`, SPDX headers policy, `README` skeleton, `CONTRIBUTING`, `SECURITY`, `CODE_OF_CONDUCT`, `CHANGELOG` (keep-a-changelog).
 - `package.json` (`@vanaheimr/metrological-cbor`, `type: module`, dual `exports`, `files`, `engines: node >= 20`, `publishConfig: { access: public, provenance: true }`), `tsconfig` strict, tsup (ESM + CJS + `.d.ts`), Vitest, ESLint flat config — all mirroring ChargyCore.TS.
 - CI workflow: typecheck + lint + test on Node 20/22/24 + bundle smoke test; nightly workflow; release workflow (publish on tag, npm provenance).
+- *Both of the above were revised after WP8.* `provenance` is gone from `publishConfig` and the release workflow with it: an npm automation token is a bearer secret that bypasses two-factor authentication by design, which is what makes it work unattended and what makes it worth stealing. Publishing is a hand operation with MFA, no credential that can publish lives in this repository, and `.github/workflows/tag.yml` verifies a tagged commit without being able to release it. The cost is npm provenance, which is real and is argued in [docs/releasing.md](docs/releasing.md).
 - **Acceptance:** met. `npm run verify` green; `npm pack` yields 21 files — `dist/`, `README`, `LICENSE`, `NOTICE`, `CHANGELOG`, `package.json`, no sources — and the tarball imports cleanly in both ESM and CommonJS.
 - *Deviation from plan:* type declarations are emitted by `tsc --emitDeclarationOnly` (`build:types`) rather than by tsup's DTS bundler, which injects the `baseUrl` option that TypeScript 6 rejects. This matches ChargyCore.TS, which splits `build:js` and `build:types` for its own reasons.
 
@@ -458,7 +459,7 @@ CI matrix: Node 20/22/24; bundle smoke test in a headless browser (Vitest browse
 | Build | tsup, dual browser/node dist | tsup for **ESM/CJS**, `tsc --emitDeclarationOnly` for `.d.ts` (no environment-specific code needed) |
 | Tests | Vitest (node/browser/bundle configs) | same |
 | Lint | ESLint flat config, typecheck script | same |
-| CI | GitHub Actions CI + nightly | same, plus release workflow with npm **provenance** |
+| CI | GitHub Actions CI + nightly | same, plus a tag workflow that **verifies and cannot publish**: npm is a hand operation with MFA, and no publishing credential exists in the repository |
 | Package | `@open-charging-cloud/chargy-core`, public scoped | `@vanaheimr/metrological-cbor`, public scoped |
 | Engines | Node ≥ 22.13 | Node ≥ 20 (pure data library; BigInt needs only ES2020) — CI tests 20/22/24 |
 | Runtime deps | pinned, minimal | **zero** |

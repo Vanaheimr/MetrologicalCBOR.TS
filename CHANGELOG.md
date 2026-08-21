@@ -24,9 +24,11 @@ was waiting on is done: IANA registered tag 44252 on 2026-08-19 — see
 
 ## [0.10.0] — 2026-08-21
 
-**The first version published to npm.** Everything through 0.9.1 was tagged in
-this changelog and in the git history and never left the repository; this is the
-release that does.
+**The version meant for npm.** Everything through 0.9.1 was tagged in this
+changelog and in the git history and never left the repository. Whether this one
+leaves it is a hand operation with multi-factor authentication and a maintainer
+at the keyboard — see [docs/releasing.md](docs/releasing.md) for why it is not a
+workflow's to do.
 
 A minor rather than a patch, and deliberately: the canonical text output changes
 shape, and encodings that 0.9.x accepted are now refused. Under 0.x that is what
@@ -143,8 +145,7 @@ freeze declared in 0.9.0 holds.
   stricter environment than a browser, so "runs in a browser" stops being a
   claim. It also asserts what the published tarball contains.
 - API documentation: `npm run docs:api` (typedoc), and a CI job that builds it.
-- `docs/releasing.md`: what publishing takes, why provenance requires a
-  workflow, and what 1.0.0 is waiting for.
+- `docs/releasing.md`: what publishing takes and what 1.0.0 is waiting for.
 
 ### Fixed
 
