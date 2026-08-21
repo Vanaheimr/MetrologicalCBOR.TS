@@ -1,6 +1,6 @@
 # Metrological CBOR (mCBOR) — TypeScript Reference Implementation
 
-**Work plan, v1.0 — 2026-08-18**
+**Work plan, v1.0 — 2026-08-18** · *revised 2026-08-21, after the first npm release*
 
 | | |
 |---|---|
@@ -341,7 +341,7 @@ Every property in those suites has the form "if it was accepted, then …", whic
 - README (badges, quick start, API overview, spec link, ChargyCore-style layout), typedoc API docs, examples incl. the optional COSE verification demo (`@noble/curves` as dev-dependency in `examples/` only).
 - Release process rehearsal: `0.1.0` after WP4, `0.2.0` after WP5, `0.3.0` after WP6, `0.9.0` API freeze after WP7.
 - **v1.0.0 gate — met on 2026-08-19:** IANA assigned tag 44252 (spec: "the numeric identifications … become permanent with the IANA registration"). The tag number lives in exactly one constant, mirroring the spec's own guidance in case 44252 were taken first; it was not, and 44252 is the only assignment between 43002 and 49999. The published semantics differs slightly from the request that was sent — *quantity **value*** and ***GUM** measurement uncertainty* — and specification §8 now quotes the registry rather than the draft.
-- **Acceptance:** met but for the last step, which is the maintainer's: the release workflow is rehearsed with `npm publish --dry-run`, its tarball asserted by a test, and the bundle exercised in a browser-only context. **Nothing is published.** The tag has been pushed and the workflow has run — and failed ahead of the `Publish` step every time, for the three reasons recorded below, so `npm publish` has never executed and no version of this package exists on npm. [docs/releasing.md](docs/releasing.md) is what a successful one takes.
+- **Acceptance:** met, and on 2026-08-21 the last step — the maintainer's — was taken for the first time. **`@vanaheimr/metrological-cbor` 0.10.0 is on npm**, published by hand with multi-factor authentication from the tagged commit `60d79a5`: 80 files, 1.29 MB unpacked. Everything this work package built was a rehearsal until then — `npm publish --dry-run`, the tarball asserted by a test, the bundle exercised in a browser-only context. No workflow ever published anything: the runs that could have, at 0.9.1, failed ahead of the step for the reasons recorded below, and none can now, since the workflow that could publish was deleted together with the credential it would have needed. What replaced it ran on `v0.10.0` and went green three minutes before the publish was typed by hand. [docs/releasing.md](docs/releasing.md) now describes a release that happened rather than one that ought to work.
 
 **The COSE demo, which was open question 6, is worth the dependency**
 
@@ -419,6 +419,13 @@ The third is the interesting one, and the most expensive: the guard was *present
 
 The lesson is not "test more". It is that **a green `verify` must mean the same thing everywhere**, and that every divergence between what a developer runs and what CI runs is a defect waiting for the least convenient moment — which, for a release workflow, is the only moment it has.
 
+**And the fourth attempt, which worked**
+
+0.10.0 went to npm by hand on 2026-08-21, three minutes after the tag, and nothing about the *package* was wrong. Two things about the **README** were, and both are particular to publishing rather than to this library:
+
+- **npm showed no README at first.** That reads exactly like a packaging defect and is not one: the registry metadata named the file (`readmeFilename = README.md`) and the 14.4 kB document was in the tarball the whole time. The website caught up by itself. Worth recording, because the obvious reaction is to cut another version to fix nothing.
+- **A README is part of the release, not part of the repository.** Its links were relative, which is right on GitHub and wrong on a registry page, where four of the nine targets — `CONTRIBUTING.md`, `SECURITY.md` and two files under `examples/` — are deliberately not in the package at all. They are absolute now. But that fix landed two commits *after* the publish, so npm renders the README of `60d79a5` and will until the next version is cut. Editing a README on GitHub does not change a published one, and the only reason that sentence is checkable here is that the tag points at exactly the commit that was published.
+
 **Decisions taken here**
 
 - **"Runs in a browser" is a test, not a claim.** The bundle is loaded in a V8 context holding only the globals a browser guarantees — no `process`, no `require`, no `Buffer`, no `__dirname` — which is stricter than a browser rather than looser, so the usual failure mode (a `Buffer` that happened to be in scope) cannot hide. A source-level check sits beside it, because a Node API reached for on an untaken branch would pass the sandbox and still break a browser.
@@ -474,7 +481,7 @@ CI matrix: Node 20/22/24; bundle smoke test in a headless browser (Vitest browse
 | Runtime deps | pinned, minimal | **zero** |
 | License | AGPL-3.0-only | **Apache-2.0** + NOTICE + SPDX headers |
 
-Versioning: SemVer; 0.x during WP4–WP7 (published early — real feedback beats private polish); API freeze at 0.9.0; 1.0.0 gated on the IANA registration (§5 WP8), which was recorded on 2026-08-19. `CHANGELOG.md` per keep-a-changelog.
+Versioning: SemVer; 0.x through WP4–WP7, a tag as each work package closed; API freeze at 0.9.0. The plan said "publish early — real feedback beats private polish", and that is not what happened: every tag through 0.9.1 stayed in the repository, and **0.10.0 on 2026-08-21 is the first version on npm**. The cost was smaller than it looks, because the feedback that shaped 0.10.0 came from the [cross-implementation conformance suite](https://github.com/Vanaheimr/MCBORConformanceTests) and the specification rather than from a registry. 1.0.0 was gated on the IANA registration, recorded on 2026-08-19; the gate is open. `CHANGELOG.md` per keep-a-changelog.
 
 ---
 
@@ -489,7 +496,8 @@ Versioning: SemVer; 0.x during WP4–WP7 (published early — real feedback beat
 | ~~M4~~ | ~~WP6~~ → **v0.3.0** | **done 2026-08-18** — document JSON round-trip | 24 d |
 | ~~M5~~ | ~~WP7~~ → **v0.9.0** | **done 2026-08-18** — conformance matrix complete, fuzzing in nightly, 100 % on `codec/` and `text/` | 28 d |
 | ~~M6~~ | ~~WP8~~ → **v0.9.1** | **done 2026-08-18** — examples, API docs, browser bundle proven, release rehearsed | 31 d |
-| M7 | **v1.0.0** | `npm publish` run by the maintainer; IANA registration of tag 44252 recorded | — |
+| ~~M7~~ | **v0.10.0** | **done 2026-08-21** — the specification's conformance decisions, and the first `npm publish`, by hand | 33 d |
+| M8 | **v1.0.0** | the API declared stable in the README and the changelog. The one thing outside this repository — the IANA registration — was recorded on 2026-08-19, and the release path is no longer theoretical | — |
 
 Total ≈ **24–36 focused person-days** (the table shows mid-range). Calendar time depends on availability; the critical path is WP2 → WP3 → WP5.
 

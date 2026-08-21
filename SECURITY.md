@@ -13,7 +13,30 @@ a mitigation plan within 30 days.
 
 ## Supported versions
 
-Until 1.0.0, only the latest published version receives fixes.
+Until 1.0.0, only the latest version on npm receives fixes.
+
+## How releases are made
+
+Part of the threat model rather than a process note: for a package installed
+from a registry, the release path is attack surface.
+
+- **No credential that can publish this package exists in this repository.**
+  There is no npm token among its secrets, and the workflow that runs on a tag
+  ([`.github/workflows/tag.yml`](.github/workflows/tag.yml)) has
+  `contents: read` and no secrets at all — it verifies a tagged commit and
+  cannot publish one.
+- **Publishing is a hand operation** from a maintainer's machine, with
+  multi-factor authentication. An automation token is a bearer secret that
+  bypasses two-factor authentication by design; the cost of refusing one is npm
+  provenance, and that trade is argued in [docs/releasing.md](docs/releasing.md).
+- **Release tags are signed**, so which commit a published version was built
+  from is a checkable claim rather than an assertion.
+- The package has **no runtime dependencies**: installing it adds one publisher
+  to your supply chain rather than a tree of them.
+
+Unsolicited offers to help maintain the project, to donate code, or to take
+publishing off the maintainer's hands are a documented step in this class of
+attack, and are treated accordingly.
 
 ## What counts as a vulnerability here
 

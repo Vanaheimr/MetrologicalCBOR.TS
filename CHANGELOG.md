@@ -7,28 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Until 1.0.0 the public API may change in minor releases. The one thing 1.0.0
 was waiting on is done: IANA registered tag 44252 on 2026-08-19 — see
-[WORKPLAN.md](WORKPLAN.md), WP8.
+[WORKPLAN.md](https://github.com/Vanaheimr/MetrologicalCBOR.TS/blob/master/WORKPLAN.md), WP8.
 
 ## [Unreleased]
 
 ### Changed
 
-- **Tag 44252 is registered with IANA**, assigned 2026-08-19. Everything that
-  called it pending says so now. Section 8 of the specification quotes the
-  entry as published rather than the request that was sent, and the two are not
-  word for word: the registry reads *quantity **value** with unit of measure,
-  SI prefix and **GUM** measurement uncertainty*. Both differences are
-  improvements, and the registry is the authority for that line. No code
-  changed — the number lives in one constant, `METROLOGICAL_VALUE_TAG`, and the
-  contingency that constant existed for never arose.
+- **The README is written for a registry as well as for a repository.** Its
+  links are absolute now, because a relative link that resolves on GitHub need
+  not resolve on an npm page, and four of the nine targets —
+  `CONTRIBUTING.md`, `SECURITY.md` and two files under `examples/` — are
+  deliberately not in the published package at all. No code changed, and none
+  of this reaches npm before the next version is cut: npm renders the README of
+  the tarball it was handed, so the page for 0.10.0 keeps the README that
+  0.10.0 shipped.
 
 ## [0.10.0] — 2026-08-21
 
-**The version meant for npm.** Everything through 0.9.1 was tagged in this
-changelog and in the git history and never left the repository. Whether this one
-leaves it is a hand operation with multi-factor authentication and a maintainer
-at the keyboard — see [docs/releasing.md](docs/releasing.md) for why it is not a
-workflow's to do.
+**The first version published to npm**, on 2026-08-21 — by hand, with
+multi-factor authentication and a maintainer at the keyboard; see
+[docs/releasing.md](docs/releasing.md) for why that is not a workflow's to do.
+Everything through 0.9.1 was tagged in this changelog and in the git history and
+never left the repository.
 
 A minor rather than a patch, and deliberately: the canonical text output changes
 shape, and encodings that 0.9.x accepted are now refused. Under 0.x that is what
@@ -67,7 +67,7 @@ implementations disagreed. This release implements those decisions.
   [nodejs/node#63785](https://github.com/nodejs/node/issues/63785) and forwarded
   to V8 as [issue 521080746](https://issues.chromium.org/issues/521080746); the
   narrowing this project added is in the script and in
-  [WORKPLAN.md](WORKPLAN.md), WP8. It is plain JavaScript with no imports,
+  [WORKPLAN.md](https://github.com/Vanaheimr/MetrologicalCBOR.TS/blob/master/WORKPLAN.md), WP8. It is plain JavaScript with no imports,
   deliberately: nothing of this library is in it, which is the whole point.
   Nothing in `src/` calls `JSON.parse` either — the JSON *text* reader here is
   this project's own scanner — so the library is unaffected. This is what stood
@@ -81,6 +81,17 @@ implementations disagreed. This release implements those decisions.
 
 ### Changed
 
+- **Tag 44252 is registered with IANA**, assigned 2026-08-19. Everything that
+  called it pending says so now. Section 8 of the specification quotes the
+  entry as published rather than the request that was sent, and the two are not
+  word for word: the registry reads *quantity **value** with unit of measure,
+  SI prefix and **GUM** measurement uncertainty*. Both differences are
+  improvements, and the registry is the authority for that line. No code
+  changed — the number lives in one constant, `METROLOGICAL_VALUE_TAG`, and the
+  contingency that constant existed for never arose. *(The copy of this file
+  inside the 0.10.0 tarball still lists this under `[Unreleased]`: it was
+  written a quarter of an hour before the version was cut, and the release
+  contains it.)*
 - **The canonical text output follows metrological-text.md**: integer unit
   exponents are written with a caret (`9.81 m·s^-2`; superscripts remain
   accepted input), the explicit scale is `×10^3` (superscript scale remains
@@ -100,6 +111,23 @@ implementations disagreed. This release implements those decisions.
   job is separating the number from its unit, and `5 m s` stays prose
   (metrological-text §2.6 — the last open tolerance question, decided).
   Whitespace *around* `·` and `*` remains tolerated.
+
+### Removed
+
+- **The release workflow, and the npm credential it would have needed.**
+  `.github/workflows/release.yml` published on a tag with an automation token.
+  An automation token is a bearer secret that bypasses two-factor
+  authentication *by design* — which is what makes it work unattended and what
+  makes it worth stealing; anything able to read the repository's secrets could
+  have published, a compromised workflow or a build-time dependency included.
+  `.github/workflows/tag.yml` replaces it with `contents: read`, no secrets and
+  no ability to publish: it refuses a tag that disagrees with `package.json`,
+  runs `npm run verify` twice — the second time on a bare clone, without the
+  specification — and rehearses the tarball. The cost is npm **provenance**,
+  which needs an OIDC token from a CI run and so cannot be had from a laptop;
+  `provenance` is gone from `publishConfig` with it. The trade is argued in
+  [docs/releasing.md](docs/releasing.md), which is also where to argue back if
+  npm trusted publishing becomes available for this scope.
 
 ### Fixed
 
@@ -182,7 +210,7 @@ freeze declared in 0.9.0 holds.
   job now runs `verify` on a bare clone, deliberately without fetching the
   specification, so the promise the README makes is one something checks.
 
-### Known — **since closed, see Unreleased**
+### Known — **since closed, see 0.10.0**
 
 - One property in `tests/json/roundtrip.test.ts` has failed twice under load
   with a counterexample that does not reproduce — replaying it passes, and some
@@ -343,7 +371,7 @@ The first version that reads and writes CBOR tag 44252. All ten examples of
 specification Section 5 encode and decode byte for byte, in both directions.
 
 The text format and the document-level JSON conversion are not here yet; see
-[WORKPLAN.md](WORKPLAN.md), WP5 and WP6.
+[WORKPLAN.md](https://github.com/Vanaheimr/MetrologicalCBOR.TS/blob/master/WORKPLAN.md), WP5 and WP6.
 
 ### Added
 

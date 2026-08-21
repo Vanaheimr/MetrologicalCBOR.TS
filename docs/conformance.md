@@ -27,7 +27,7 @@ violated, and the constructor or the type for one that cannot.
 |---|---|---|---|
 | 3 | The tag content MUST be an array of two, three or four data items. Any other length is an error. | [decode.ts:142](../src/codec/decode.ts#L142), [:151](../src/codec/decode.ts#L151) — `ERR_ARITY` | `rejection.test.ts` — `D9ACDC80`, `D9ACDC8105`, `D9ACDC850504000000`, `D9ACDC05` |
 | 3 | The item must carry tag 44252. | [decode.ts:137](../src/codec/decode.ts#L137) — `ERR_TAG_MISMATCH` | `rejection.test.ts` — `D8FF820504`, `820504` |
-| 3 | The tag number lives in exactly one place, against the possibility that 44252 is taken at IANA first. | [tag.ts](../src/tag.ts) — `METROLOGICAL_VALUE_TAG` | `types.test.ts` — *isTagged takes the tag number either way it is written* |
+| 3 | The tag number lives in exactly one place. It was put there against the possibility that 44252 was taken at IANA first; it was not — the registration was assigned on 2026-08-19 — so the constant is now simply where the number lives. | [tag.ts](../src/tag.ts) — `METROLOGICAL_VALUE_TAG` | `types.test.ts` — *isTagged takes the tag number either way it is written* |
 
 ## 2. Section 3.1 — the reading
 
