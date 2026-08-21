@@ -83,6 +83,7 @@ formatting and parsing are exact string arithmetic, and an ESLint rule bans
 | 3.4 | The uncertainty MUST NOT be negative. | [uncertainty.ts:174](../src/model/uncertainty.ts#L174) — `ERR_UNCERTAINTY_NEGATIVE` | `rejection.test.ts` — `D9ACDC8405040020` |
 | 3.4 | It is expressed in the same unit and prefix as the value. | [value.ts](../src/model/value.ts) — the uncertainty has no unit of its own to disagree with | `model/value.test.ts`; `text/text-format.test.ts` |
 | 3.4 | A bare number is the standard uncertainty, i.e. a coverage factor of 1. | [uncertainty.ts](../src/model/uncertainty.ts) — `coverageFactor` absent means 1 | `section5-vectors.test.ts` — vectors 5 and 6 |
+| 3.4 | A map stating only the magnitude MUST NOT be written, and decoders MUST reject the redundant form. | [decode.ts](../src/codec/decode.ts) — `ERR_UNCERTAINTY_REDUNDANT_MAP` in strict mode (the default) | `rejection.test.ts`; `spec-vectors.test.ts` — `uncertainty-map-only-magnitude` |
 | 3.4 | Key 1, the magnitude, is required. | [decode.ts:474](../src/codec/decode.ts#L474) — `ERR_UNCERTAINTY_NO_MAGNITUDE` | `rejection.test.ts` — `D9ACDC8405040 0A0` |
 | 3.4 | The coverage probability is a fraction in ]0, 1]. | [uncertainty.ts:185](../src/model/uncertainty.ts#L185) — `ERR_UNCERTAINTY_PROBABILITY` | `rejection.test.ts` — `D9ACDC84050400A2010103 00`, `… 02` |
 | 3.4 | The effective degrees of freedom are positive. | [uncertainty.ts:190](../src/model/uncertainty.ts#L190) — `ERR_UNCERTAINTY_DEGREES_OF_FREEDOM` | `rejection.test.ts` — `D9ACDC84050400A2010105 00` |
@@ -156,14 +157,14 @@ is the documented lossy convenience beside it.
 ## 10. Where this implementation stood ahead of the specification
 
 This section used to list five spellings this library refused although the
-document allowed them. On 2026-08-18 the specification decided them — via
-the [cross-implementation conformance suite](https://github.com/Vanaheimr/MCBORConformanceTests)
-— and four became normative decoder rejections, now listed in their sections
+document allowed them. On 2026-08-18 the specification decided most of them
+— via the [cross-implementation conformance suite](https://github.com/Vanaheimr/MCBORConformanceTests)
+— and they became normative decoder rejections, now listed in their sections
 above: the one-element product and the unreduced rational exponent (Section
 3.2, where the earlier "decoders MUST *reduce*" became "decoders MUST
 *reject*"), the redundant prefix 0 (Section 3.3), and the unknown
-uncertainty-map key (Section 3.4). The fifth, `4([0, 5])` where `5` would
-do, is subsumed by the stronger new rule of Section 3.1 that a decimal
+uncertainty-map key (Section 3.4). One of the five, `4([0, 5])` where `5`
+would do, is subsumed by the stronger new rule of Section 3.1 that a decimal
 fraction's exponent is negative on the wire.
 
 The unreduced exponent is worth remembering by name: it was found by the
@@ -172,11 +173,21 @@ mode used to accept `[20, 2]` and write `10` back, so decoding and
 re-encoding a signed document changed its bytes. That finding is what argued
 the specification into *reject* rather than *reduce*.
 
-What genuinely remains stricter than any MUST:
+The last of the five held out until 2026-08-21, and how it fell is worth the
+paragraph. An uncertainty map stating nothing but its magnitude was refused
+here on an **inference**: Section 3.4 called the bare number the compact
+form, Section 6 forbids one value two encodings — but neither said a decoder
+must reject it, and Section 6's own list of value-level rules named Sections
+3.1 to 3.3 and stopped there.
 
-| Spelling | Code | Why it is refused |
-|---|---|---|
-| An uncertainty map holding nothing but a magnitude | `ERR_UNCERTAINTY_REDUNDANT_MAP` | Section 3.4 calls the bare number the compact form; a map that states no more gives one uncertainty two encodings, which Section 6 does not allow — but the document stops short of a decoder MUST |
+Measuring it is what settled it. This library refused the map; the C#
+reference implementation accepted it and normalised it to the bare form. Two
+implementations agreeing on what the map *means* and disagreeing on whether
+to take it — and no vector to notice, because there was no rule to write one
+against. Section 3.4 states the rule now, Section 6's list names Section 3.4
+with the others, and the annex carries `uncertainty-map-only-magnitude`.
+
+**Nothing in this library is stricter than a MUST any more.**
 
 And one mode is now *weaker* than the document, deliberately and visibly:
 **lenient mode** (`strict: false`) still reads the one-element product, the
