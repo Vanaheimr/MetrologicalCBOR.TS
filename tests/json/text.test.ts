@@ -29,6 +29,8 @@ import { describe, expect, it } from 'vitest';
 import { bytesToHex, hexToBytes } from '../../src/cbor/hex.js';
 import { jsonTextToMcbor, mcborToJsonText } from '../../src/json/text.js';
 import { codeOf }                 from '../support/errors.js';
+import { UnitRegistry }           from '../../src/registry/index.js';
+import type { CborValue }         from '../../src/cbor/types.js';
 
 /** JSON text of CBOR bytes given as hex. */
 function jsonOf(hex: string): string {
@@ -428,6 +430,159 @@ describe('the conversion options', () => {
         // map back to the key it came from.
         expect(codeOf(() => mcborToJsonText(hexToBytes('A18101 02'.replace(/ /g, '')),
                                             { mapKeys: 'stringify' }))).toBe('ERR_JSON_KEY');
+    });
+
+});
+
+
+/**
+ * Every way the exact path refuses, and the three branches only a caller
+ * holding a `CborValue` can reach.
+ *
+ * These were the last uncovered lines of `src/json/text.ts`, and *why* they
+ * were uncovered is the point: each is what happens when a **document** is
+ * wrong rather than when this library is. The conformance vectors are
+ * well-formed by construction and the round-trip properties generate only what
+ * the profile carries, so nothing above ever asks a refusal what it says. A
+ * refusal nobody has executed is a refusal nobody has read — it can name the
+ * wrong limit, point at the wrong position, or cite a rule the code stopped
+ * enforcing, and every other test here would stay green.
+ *
+ * Every byte string below was computed by the encoder rather than written by
+ * hand; hand-authored hex is what produced this project's only vector bugs.
+ */
+describe('what the exact path refuses', () => {
+
+    /** Nesting as an item, since the reader stops at the same depth as the writer. */
+    const nested = (depth: number): CborValue => {
+        let item: CborValue = { type: 'int', value: 0n };
+        for (let level = 0; level < depth; level++)
+            item = { type: 'array', items: [item] };
+        return item;
+    };
+
+    /** The message rather than the code, where the message is the thing under test. */
+    const messageOf = (run: () => unknown): string => {
+        try { run(); return 'no error'; }
+        catch (error) { return (error as Error).message; }
+    };
+
+    describe('writing', () => {
+
+        it('carries a document at the depth limit and refuses one past it', () => {
+            expect(mcborToJsonText(nested(64))).toContain('[');
+            expect(codeOf(() => mcborToJsonText(nested(66)))).toBe('ERR_JSON_UNSUPPORTED');
+        });
+
+        it('refuses a binary float where the caller asked it to', () => {
+            expect(jsonOf('81F93C00')).toBe('[1.0]');
+            expect(codeOf(() => mcborToJsonText(hexToBytes('81F93C00'), { floats: 'error' })))
+                .toBe('ERR_JSON_UNSUPPORTED');
+        });
+
+        it('refuses a non-text map key, and says what to set', () => {
+            expect(codeOf(() => jsonOf('A10102'))).toBe('ERR_JSON_KEY');
+            expect(messageOf(() => jsonOf('A10102'))).toMatch(/mapKeys/);
+        });
+
+        it('writes the other key types in diagnostic notation on request', () => {
+            const stringify = (hex: string) => mcborToJsonText(hexToBytes(hex), { mapKeys: 'stringify' });
+            expect(stringify('A10102')).toBe('{"1":2}');
+            expect(stringify('A1F502')).toBe('{"true":2}');
+            expect(stringify('A1F402')).toBe('{"false":2}');
+            expect(stringify('A1F602')).toBe('{"null":2}');
+            expect(stringify('A142010202')).toBe(`{"h'0102'":2}`);
+        });
+
+        it('refuses two keys that would become one JSON name', () => {
+            // The integer 1 and the text "1" are two CBOR keys and one JSON
+            // name. Stringification does not fix that; it causes it.
+            expect(codeOf(() => mcborToJsonText(hexToBytes('A20102613103'), { mapKeys: 'stringify' })))
+                .toBe('ERR_JSON_KEY');
+        });
+
+        it('refuses a decimal fraction that is not [exponent, mantissa]', () => {
+            expect(codeOf(() => jsonOf('C48261616162'))).toBe('ERR_JSON_UNSUPPORTED');
+            expect(codeOf(() => jsonOf('C48100'))).toBe('ERR_JSON_UNSUPPORTED');
+        });
+
+        it('refuses a decimal exponent beyond what it reconstructs', () => {
+            // 65537, one past the limit: writing the digits out would cost
+            // more memory than finding that out is worth.
+            expect(codeOf(() => jsonOf('C4821A0001000105'))).toBe('ERR_JSON_UNSUPPORTED');
+        });
+
+        it('writes a negative mantissa with its scale', () => {
+            expect(jsonOf('C482213907CE')).toBe('-19.99');
+        });
+
+        it('refuses an epoch time outside the range a date can hold', () => {
+            expect(codeOf(() => jsonOf('C11B002386F26FC10000'))).toBe('ERR_JSON_UNSUPPORTED');
+        });
+
+        it('writes an epoch time given as a float', () => {
+            expect(jsonOf('C1F93C00')).toBe('"1970-01-01T00:00:01.000Z"');
+        });
+
+        it('takes a bignum that a reader handed over as an integer', () => {
+            // This reader normalises tags 2 and 3 into integers, so the branch
+            // is reachable only from a caller passing the item itself — which
+            // is the reader-that-does-not it was written for.
+            expect(mcborToJsonText({ type: 'tag', tag: 2n, value: { type: 'int', value: 5n } })).toBe('5');
+        });
+
+        it('resolves units against a registry the caller names', () => {
+            expect(mcborToJsonText(hexToBytes('D9ACDC820504'), { registry: UnitRegistry.standard }))
+                .toBe('"5 A"');
+        });
+
+    });
+
+    describe('reading', () => {
+
+        it('refuses text nested past the limit', () => {
+            expect(codeOf(() => jsonTextToMcbor('['.repeat(66) + ']'.repeat(66)))).toBe('ERR_JSON_TYPE');
+        });
+
+        it('says what it was looking for when it stopped', () => {
+            // The position and the name are the whole value of these messages:
+            // a parser that only says "malformed" sends its reader back to the
+            // start of the document.
+            expect(messageOf(() => jsonTextToMcbor('{"a" 1}'))).toMatch(/no ':' after the name "a"/);
+            expect(messageOf(() => jsonTextToMcbor('{"a":1 "b":2}'))).toMatch(/no ',' or '\}' after the member "a"/);
+            expect(messageOf(() => jsonTextToMcbor('[1 2]'))).toMatch(/no ',' or '\]' after item 0/);
+            expect(messageOf(() => jsonTextToMcbor('[tru]'))).toMatch(/position 1/);
+            expect(messageOf(() => jsonTextToMcbor('[+1]'))).toMatch(/position 1/);
+        });
+
+        it('refuses a decimal exponent beyond what it reconstructs', () => {
+            expect(codeOf(() => jsonTextToMcbor('1e70000'))).toBe('ERR_JSON_PRECISION');
+        });
+
+        it('resolves units against a registry the caller names', () => {
+            expect(bytesToHex(jsonTextToMcbor('"5 A"', { registry: UnitRegistry.standard })))
+                .toBe('D9ACDC820504');
+        });
+
+        it('leaves every string alone where readings are switched off', () => {
+            expect(hexOf('"5 A"')).toBe('D9ACDC820504');
+            expect(bytesToHex(jsonTextToMcbor('"5 A"', { readings: 'none' }))).toBe('63352041');
+        });
+
+        it('asks a predicate rather than the grammar where one is given', () => {
+            const onlyEnergy = (_text: string, path: readonly (string | number)[]) => path.at(-1) === 'e';
+            expect(bytesToHex(jsonTextToMcbor('{"e":"5 A","p":"5 A"}', { readings: onlyEnergy })))
+                .toBe('A26165D9ACDC820504617063352041');
+        });
+
+        it('reports a predicate that claimed a reading the grammar cannot read', () => {
+            // Under 'auto' a string that does not parse simply stays text.
+            // Where the caller asserted it *is* a reading, staying quiet would
+            // lose a measurement they believe they have.
+            expect(() => jsonTextToMcbor('"not a reading"', { readings: () => true })).toThrow();
+            expect(bytesToHex(jsonTextToMcbor('"not a reading"'))).toBe('6D6E6F7420612072656164696E67');
+        });
+
     });
 
 });
