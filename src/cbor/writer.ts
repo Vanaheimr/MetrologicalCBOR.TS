@@ -424,9 +424,11 @@ class ByteWriter {
         // tag is checked against MAX_UINT64, an integer above it becomes a
         // bignum, and the lengths of arrays, maps and strings cannot approach
         // 2^64. This is what would catch a caller that stops doing so.
+        /* v8 ignore start -- unreachable by the argument above */
         else
             throw new CborError('ERR_CBOR_UNENCODABLE',
                                 `The argument ${String(argument)} does not fit in a CBOR head.`);
+        /* v8 ignore stop */
 
     }
 
@@ -521,6 +523,12 @@ export function toHalfBits(value: number): number | undefined {
     // is a NaN, and NaN left above - twice, once by `Number.isNaN` and once
     // because it never compares equal to itself. Infinity is what actually
     // arrives here.
+    //
+    // The hint below covers the whole line rather than the one arm, because
+    // v8 has no branch-level hint for a conditional expression. It therefore
+    // also stops reporting the arm that IS taken - a cost worth naming, and
+    // the reason the comment above stays: it is what a reader has.
+    /* v8 ignore next 2 -- the `undefined` arm is unreachable, see above */
     if (exponent === 0xFF)
         return mantissa === 0 ? sign | 0x7C00 : undefined;
 

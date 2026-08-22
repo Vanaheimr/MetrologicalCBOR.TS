@@ -110,6 +110,10 @@ function greatestCommonDivisor(left: number, right: number): number {
     // a rational exponent with a numerator of zero is rejected before it can
     // be reduced. Returning 1 rather than dividing by zero is what the caller
     // would need if that ever changed.
+    //
+    // As in `writer.ts`, the hint covers the line rather than the arm: v8 has
+    // no branch-level hint for a conditional expression.
+    /* v8 ignore next -- the 1 is unreachable, see above */
     return a === 0 ? 1 : a;
 
 }

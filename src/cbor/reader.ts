@@ -200,6 +200,7 @@ class ByteReader {
             // Unreachable, and kept: `major` is one byte shifted right by
             // five, so it is 0..7, and 7 returned above. This is what would
             // catch a change to either of those two facts.
+            /* v8 ignore next 2 -- unreachable by the argument above */
             default:
                 throw this.#malformed(`Unknown major type ${String(major)}.`, start);
 

@@ -33,6 +33,12 @@ was waiting on is done: IANA registered tag 44252 on 2026-08-19 — see
   SHOULD allow. `tests/vectors/signed-example.ts`, the two examples that carry
   the record, and the fetched `spec/` copy follow.
 
+- **The four unreachable branches are marked for the coverage tool as well.**
+  They were annotated with the argument for their unreachability and left
+  uncovered; they now carry `/* v8 ignore */` hints beside those arguments, so
+  coverage reads 100% of statements, branches, functions and lines rather than
+  99.9% with four defended exceptions a reader had to look up.
+
 - **The README is written for a registry as well as for a repository.** Its
   links are absolute now, because a relative link that resolves on GitHub need
   not resolve on an npm page, and four of the nine targets —
