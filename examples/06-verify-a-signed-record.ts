@@ -183,7 +183,16 @@ console.log();
     // message, so the signature is a function of what it signs. If this library
     // built a Sig_structure that differed from the signer's by one byte, the
     // signature below would differ completely.
-    const again = curveOf('station').sign(digest('sha256', signed), privateKey('station'), { prehash: false });
+    //
+    // `lowS: false` for the same reason `verify` above passes it, and this is
+    // the check that proves the reason is real rather than theoretical: the
+    // signer does not normalise s to the low half, this library's default
+    // does, and roughly half of all signatures are unaffected by that. The
+    // record published until 2026-08-22 happened to have a low s here and
+    // this comparison passed without the flag; the regenerated one has a high
+    // s, and it did not.
+    const again = curveOf('station').sign(digest('sha256', signed), privateKey('station'),
+                                          { prehash: false, lowS: false });
 
     console.log('          re-sign',
                 bytesToHex(again) === bytesToHex(stationSignature.value)
