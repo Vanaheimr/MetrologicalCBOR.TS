@@ -91,7 +91,7 @@ describe('02 — a document through JSON', () => {
 
     it('shows all three ways of deciding which strings are readings', () => {
         expect(output).toContain('auto              A1646E6F7465D9ACDC820112');
-        expect(output).toContain('none              A1646E6F746563312068');
+        expect(output).toContain('none (default)    A1646E6F746563312068');
         expect(output).toContain('"note": "1 h", "energy": 44252([4([-2, 110]), 2, 3])');
     });
 

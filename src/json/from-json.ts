@@ -22,14 +22,24 @@
  * strings are readings. JSON has no type for one, so something has to decide,
  * and each way of deciding is wrong in a different situation:
  *
- * - Trying every string against the grammar (`readings: 'auto'`, the default)
- *   recovers the document without being told anything, which is what makes the
- *   round trip work out of the box. Its hazard is a string that is prose and
- *   happens to read as a reading: a free-text field holding `"1 h"` becomes one
- *   hour.
- * - Converting nothing (`readings: 'none'`) is safe and useless on its own.
+ * - Converting nothing (`readings: 'none'`) is the default. A string stays a
+ *   string unless the caller says otherwise, so this conversion never invents
+ *   a measurement out of prose - and inventing one is the failure that cannot
+ *   be noticed downstream, because the result is a perfectly well-formed
+ *   reading of something nobody measured.
+ * - Trying every string against the grammar (`readings: 'auto'`) recovers a
+ *   document without being told anything, which is what a round trip wants.
+ *   Its hazard is the mirror image: a free-text field holding `"1 h"` becomes
+ *   one hour.
  * - A predicate decides per path, which is what an application with a schema
  *   should use, and what the hazard above calls for.
+ *
+ * The default was `'auto'` until 2026-08-22, on the argument that the round
+ * trip should work without configuration. It was changed because that put the
+ * risk on the party who had not chosen: a caller who passes nothing gets
+ * guessing, and the guess is invisible when it is wrong. `'auto'` is now
+ * something a caller asks for - and the conversion the specification
+ * describes is exactly that ask.
  *
  * The grammar is strict and anchored, so the hazard is narrow — `"about 1 h"`
  * and `"1 hour"` are not readings — but it is real, and naming it is better
@@ -66,7 +76,7 @@ export interface FromJsonOptions {
     /** The registry to resolve units against. Defaults to the standard one. */
     readonly registry?: UnitRegistry;
 
-    /** Which strings are readings. Defaults to `'auto'`. */
+    /** Which strings are readings. Defaults to `'none'`: nothing is guessed. */
     readonly readings?: ReadingDetection;
 
 }
@@ -147,7 +157,7 @@ function convert(json: JsonValue, path: JsonPath, options: FromJsonOptions, subs
 
 function convertString(text: string, path: JsonPath, options: FromJsonOptions): CborValue {
 
-    if (!looksLikeReading(text, path, options.readings ?? 'auto'))
+    if (!looksLikeReading(text, path, options.readings ?? 'none'))
         return { type: 'text', value: text };
 
     try {

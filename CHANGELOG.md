@@ -13,6 +13,17 @@ was waiting on is done: IANA registered tag 44252 on 2026-08-19 — see
 
 ### Changed
 
+- **BREAKING: `readings` defaults to `'none'`.** The JSON-to-mCBOR conversion
+  no longer guesses which strings are readings. A string stays a string until
+  the caller says otherwise — `{ readings: 'auto' }` to try every string
+  against the grammar, or a predicate to decide per path. The old default made
+  the round trip work without configuration and put the risk on the party who
+  had not chosen: a prose field holding `"1 h"` became a perfectly well-formed
+  reading of something nobody measured, and nothing downstream could tell.
+  Callers performing the conversion `metrological-text.md` Section 3 describes
+  — including its own document vectors — now ask for it, which is visible in
+  the source rather than implied by a default.
+
 - **The worked signed example was regenerated.** Its payloads are now the
   deterministic encoding of themselves, so the maps read in sorted order
   rather than in reading order. The record is the same 713 bytes and every

@@ -156,16 +156,22 @@ describe.runIf(built)('the bundle, with no Node global in sight', () => {
     it('converts a document to JSON and back', () => {
 
         const toJson   = library['mcborToJson'] as (bytes: Uint8Array) => unknown;
-        const fromJson = library['jsonToMcbor'] as (json: unknown) => Uint8Array;
+        const fromJson = library['jsonToMcbor'] as (json: unknown, options?: unknown) => Uint8Array;
         const toHex    = library['bytesToHex'] as (bytes: Uint8Array) => string;
 
         const document = { meter: '1ISA0000000042', energy: '1.10 kWh' };
 
+        // `readings: 'auto'` because the round trip is what is being tested,
+        // and the conversion is something a caller asks for - the default
+        // guesses nothing, in the bundle exactly as under Node.
+        const asSpecified = { readings: 'auto' };
+
         // Compared as JSON rather than by identity of shape: the object came
         // back from the sandbox and carries *its* Object.prototype, which
         // `toStrictEqual` would call a difference and a consumer never would.
-        expect(JSON.stringify(toJson(fromJson(document)))).toBe(JSON.stringify(document));
-        expect(toHex(fromJson(document))).toContain('D9ACDC');
+        expect(JSON.stringify(toJson(fromJson(document, asSpecified)))).toBe(JSON.stringify(document));
+        expect(toHex(fromJson(document, asSpecified))).toContain('D9ACDC');
+        expect(toHex(fromJson(document))).not.toContain('D9ACDC');
 
     });
 

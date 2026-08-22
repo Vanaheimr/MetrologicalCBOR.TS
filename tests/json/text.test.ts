@@ -31,6 +31,7 @@ import { jsonTextToMcbor, mcborToJsonText } from '../../src/json/text.js';
 import { codeOf }                 from '../support/errors.js';
 import { UnitRegistry }           from '../../src/registry/index.js';
 import type { CborValue }         from '../../src/cbor/types.js';
+import type { FromJsonOptions }   from '../../src/json/from-json.js';
 
 /** JSON text of CBOR bytes given as hex. */
 function jsonOf(hex: string): string {
@@ -38,9 +39,17 @@ function jsonOf(hex: string): string {
 }
 
 /** Canonical CBOR hex of JSON text. */
-function hexOf(json: string): string {
-    return bytesToHex(jsonTextToMcbor(json));
+function hexOf(json: string, options: FromJsonOptions = {}): string {
+    return bytesToHex(jsonTextToMcbor(json, options));
 }
+
+/**
+ * The conversion `metrological-text.md` Section 3 describes: a string that
+ * reads as a reading becomes one. It is not the default - the default guesses
+ * nothing - so every test that means the specified conversion says so.
+ */
+const AS_SPECIFIED = { readings: 'auto' } as const;
+
 
 
 describe('CBOR to JSON text', () => {
@@ -110,10 +119,15 @@ describe('JSON text to CBOR', () => {
         expect(hexOf('1e100')).toBe(`C2582A${(10n ** 100n).toString(16).toUpperCase().padStart(84, '0')}`);
     });
 
-    it('reads a string that is a reading as tag 44252', () => {
-        expect(hexOf('"5 A"')).toBe('D9ACDC820504');
-        expect(hexOf('{"e":"1.10 kWh"}')).toBe('A16165D9ACDC83C48221186E0203');
-        expect(hexOf('{"s":"about 1 h"}')).toBe('A161736961626F757420312068');
+    it('reads a string that is a reading as tag 44252 where asked to', () => {
+        expect(hexOf('"5 A"',                AS_SPECIFIED)).toBe('D9ACDC820504');
+        expect(hexOf('{"e":"1.10 kWh"}',     AS_SPECIFIED)).toBe('A16165D9ACDC83C48221186E0203');
+        expect(hexOf('{"s":"about 1 h"}',    AS_SPECIFIED)).toBe('A161736961626F757420312068');
+
+        // And leaves all three alone where it was not asked, which is the
+        // default: a document that says nothing about its strings gets
+        // strings back.
+        expect(hexOf('"5 A"')).toBe('63352041');
     });
 
     it('keeps a bare numeric string a string', () => {
@@ -142,7 +156,7 @@ describe('the exact round trip', () => {
         'A0',
         '80',
     ])('%s survives CBOR → JSON text → CBOR', hex => {
-        expect(hexOf(jsonOf(hex))).toBe(hex);
+        expect(hexOf(jsonOf(hex), AS_SPECIFIED)).toBe(hex);
     });
 
 });
@@ -560,13 +574,17 @@ describe('what the exact path refuses', () => {
         });
 
         it('resolves units against a registry the caller names', () => {
-            expect(bytesToHex(jsonTextToMcbor('"5 A"', { registry: UnitRegistry.standard })))
+            expect(bytesToHex(jsonTextToMcbor('"5 A"', { registry: UnitRegistry.standard,
+                                                         ...AS_SPECIFIED })))
                 .toBe('D9ACDC820504');
         });
 
-        it('leaves every string alone where readings are switched off', () => {
-            expect(hexOf('"5 A"')).toBe('D9ACDC820504');
+        it('leaves every string alone unless the caller asks otherwise', () => {
+            // 'none' is the default, so these two are the same call written
+            // two ways - and the one that differs is the one that opts in.
+            expect(hexOf('"5 A"')).toBe('63352041');
             expect(bytesToHex(jsonTextToMcbor('"5 A"', { readings: 'none' }))).toBe('63352041');
+            expect(hexOf('"5 A"', AS_SPECIFIED)).toBe('D9ACDC820504');
         });
 
         it('asks a predicate rather than the grammar where one is given', () => {

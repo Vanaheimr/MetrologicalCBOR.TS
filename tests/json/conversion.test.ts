@@ -37,6 +37,14 @@ import { codeOf }                 from '../support/errors.js';
 const PLUS_MINUS = '±';
 
 
+
+/**
+ * The conversion `metrological-text.md` Section 3 describes: a string that
+ * reads as a reading becomes one. It is not the default - the default guesses
+ * nothing - so every test that means the specified conversion says so.
+ */
+const AS_SPECIFIED = { readings: 'auto' } as const;
+
 describe('the meter reading of the worked example', () => {
 
     const json = mcborToJson(hexToBytes(METER_READING_HEX));
@@ -110,7 +118,7 @@ describe('what round-trips byte for byte', () => {
 
         const json = mcborToJson(hexToBytes(hex));
 
-        expect(bytesToHex(jsonToMcbor(json))).toBe(hex);
+        expect(bytesToHex(jsonToMcbor(json, AS_SPECIFIED))).toBe(hex);
 
     });
 
@@ -120,7 +128,7 @@ describe('what round-trips byte for byte', () => {
         const json = mcborToJson(hexToBytes('D9ACDC83C48221186E0203'));
 
         expect(json).toBe('1.10 kWh');
-        expect(bytesToHex(jsonToMcbor(json))).toBe('D9ACDC83C48221186E0203');
+        expect(bytesToHex(jsonToMcbor(json, AS_SPECIFIED))).toBe('D9ACDC83C48221186E0203');
 
     });
 
@@ -260,24 +268,29 @@ describe('what has no JSON counterpart', () => {
 
 describe('deciding which strings are readings', () => {
 
-    it('reads one back by default', () => {
-        expect(bytesToHex(jsonToMcbor('230 V'))).toBe('D9ACDC8218E605');
+    it('reads none back by default, and one back where asked', () => {
+        // The default guesses nothing: a string is a string until the caller
+        // says which strings are readings.
+        expect(bytesToHex(jsonToMcbor('230 V'))).toBe('653233302056');
+        expect(bytesToHex(jsonToMcbor('230 V', AS_SPECIFIED))).toBe('D9ACDC8218E605');
     });
 
-    it('leaves a string that is not a reading alone', () => {
-        expect(bytesToHex(jsonToMcbor('Transaction.Begin'))).toBe('7154 72616E73616374696F6E2E426567696E'.replace(/\s/g, ''));
-        expect(bytesToHex(jsonToMcbor('1ISA0000000042'))).toBe('6E31495341303030303030303034 32'.replace(/\s/g, ''));
+    it('leaves a string that is not a reading alone even under \'auto\'', () => {
+        expect(bytesToHex(jsonToMcbor('Transaction.Begin', AS_SPECIFIED))).toBe('7154 72616E73616374696F6E2E426567696E'.replace(/\s/g, ''));
+        expect(bytesToHex(jsonToMcbor('1ISA0000000042', AS_SPECIFIED))).toBe('6E31495341303030303030303034 32'.replace(/\s/g, ''));
     });
 
     it('has the hazard it is documented to have', () => {
 
-        // A free-text field holding "1 h" becomes one hour. The grammar is
-        // strict and anchored, so this is narrow, but it is real.
-        const reading = jsonToMcbor('1 h');
+        // Under 'auto', a free-text field holding "1 h" becomes one hour.
+        // The grammar is strict and anchored, so this is narrow, but it is
+        // real - and it is the reason 'auto' has to be asked for.
+        const reading = jsonToMcbor('1 h', AS_SPECIFIED);
 
         expect(bytesToHex(reading)).toBe('D9ACDC820112');
 
-        // Which is what the predicate is for.
+        // Which the default, and the predicate, are for.
+        expect(bytesToHex(jsonToMcbor('1 h'))).toBe('63312068');
         expect(bytesToHex(jsonToMcbor('1 h', { readings: 'none' }))).toBe('63312068');
 
     });
@@ -487,8 +500,8 @@ describe('options that reach past the standard registry', () => {
         // On the way in, without the registry, "5 flurbo" is a string that
         // does not parse as a reading — so under 'auto' it stays the string it
         // was, which is the documented behaviour and not a failure.
-        expect(bytesToHex(jsonToMcbor('5 flurbo'))).toBe('683520666C7572626F');
-        expect(bytesToHex(jsonToMcbor('5 flurbo', { registry }))).toBe('D9ACDC8205199C40');
+        expect(bytesToHex(jsonToMcbor('5 flurbo', AS_SPECIFIED))).toBe('683520666C7572626F');
+        expect(bytesToHex(jsonToMcbor('5 flurbo', { registry, ...AS_SPECIFIED }))).toBe('D9ACDC8205199C40');
 
     });
 

@@ -107,6 +107,14 @@ const DOCUMENTS    = suite<DocumentCase>('documents');
 const JSON_TO_CBOR = suite<JsonToCborCase>('json-to-cbor');
 
 
+
+/**
+ * The conversion `metrological-text.md` Section 3 describes: a string that
+ * reads as a reading becomes one. It is not the default - the default guesses
+ * nothing - so a vector that asserts the specified conversion asks for it.
+ */
+const AS_SPECIFIED = { readings: 'auto' } as const;
+
 describe.skipIf(!PRESENT)('the test vectors of the specification', () => {
 
     describe('values', () => {
@@ -180,11 +188,15 @@ describe.skipIf(!PRESENT)('the test vectors of the specification', () => {
             if (testCase.json !== undefined && testCase.jsonClass !== 'survey')
                 expect(json).toBe(testCase.json);
 
+            // AS_SPECIFIED, because that is what these vectors are: the
+            // specification says a string that reads as a reading converts
+            // back to one, and a decoder that guesses nothing by default has
+            // to be asked to perform the conversion the document describes.
             if (testCase.roundtripHex !== undefined)
-                expect(bytesToHex(jsonTextToMcbor(json))).toBe(testCase.roundtripHex);
+                expect(bytesToHex(jsonTextToMcbor(json, AS_SPECIFIED))).toBe(testCase.roundtripHex);
 
             else if (testCase.roundtrip === true)
-                expect(bytesToHex(jsonTextToMcbor(json))).toBe(testCase.cborHex);
+                expect(bytesToHex(jsonTextToMcbor(json, AS_SPECIFIED))).toBe(testCase.cborHex);
 
         });
 
@@ -196,7 +208,7 @@ describe.skipIf(!PRESENT)('the test vectors of the specification', () => {
         it.each(JSON_TO_CBOR.filter(each => each.cborHex !== undefined && each.class !== 'survey')
                             .map(each => [each.id, each] as const))('%s', (_, testCase) => {
 
-            expect(bytesToHex(jsonTextToMcbor(testCase.json))).toBe(testCase.cborHex ?? '');
+            expect(bytesToHex(jsonTextToMcbor(testCase.json, AS_SPECIFIED))).toBe(testCase.cborHex ?? '');
 
         });
 

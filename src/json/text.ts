@@ -670,7 +670,7 @@ class JsonTextParser {
  */
 function readingOrText(text: string, path: JsonPath, options: FromJsonOptions): CborValue {
 
-    const detection = options.readings ?? 'auto';
+    const detection = options.readings ?? 'none';
 
     const candidate = detection === 'none'
                           ? false

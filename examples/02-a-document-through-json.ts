@@ -84,12 +84,13 @@ console.log('as digits        ', mcborToJson(hexToBytes('1B7FFFFFFFFFFFFFFF'), {
 
 // --- Which strings are readings ---------------------------------------------
 
-// By default every string that starts like a number is tried against the
-// grammar. That is what makes the round trip work with no configuration, and
-// it has a documented hazard: a prose field holding "1 h" becomes one hour.
+// Nothing is guessed by default: a string stays a string. Ask for 'auto' and
+// every string that starts like a number is tried against the grammar, which
+// is what recovers a document nobody described - at a documented hazard: a
+// prose field holding "1 h" becomes one hour.
 console.log();
-console.log('auto             ', bytesToHex(jsonToMcbor({ note: '1 h' })));
-console.log('none             ', bytesToHex(jsonToMcbor({ note: '1 h' }, { readings: 'none' })));
+console.log('auto             ', bytesToHex(jsonToMcbor({ note: '1 h' }, { readings: 'auto' })));
+console.log('none (default)   ', bytesToHex(jsonToMcbor({ note: '1 h' })));
 
 // An application with a schema says which paths hold measurements.
 const schema = jsonToMcbor(

@@ -150,6 +150,15 @@ const platformCheck = (bytes: Uint8Array): string => {
  * `scripts/v8-json-key-repro.mjs`, which shows it in plain JavaScript with
  * nothing of this library in it.
  */
+
+/**
+ * The conversion `metrological-text.md` Section 3 describes: a string that
+ * reads as a reading becomes one. It is not the default - the default guesses
+ * nothing - so a round trip has to ask for it, which is the whole point of
+ * the round trip.
+ */
+const AS_SPECIFIED = { readings: 'auto' } as const;
+
 describe('the profile round-trips', () => {
 
     it('a document comes back byte-identical', () => {
@@ -157,7 +166,7 @@ describe('the profile round-trips', () => {
         fc.assert(
             fc.property(anyDocument, document => {
                 const bytes = encodeCbor(document);
-                assertStable(() => bytesToHex(jsonToMcbor(mcborToJson(bytes))),
+                assertStable(() => bytesToHex(jsonToMcbor(mcborToJson(bytes), AS_SPECIFIED)),
                              bytesToHex(bytes),
                              () => bytesToHex(bytes));
             }),
@@ -177,7 +186,7 @@ describe('the profile round-trips', () => {
                     () => {
                         const json  = mcborToJson(bytes);
                         const again = JSON.parse(JSON.stringify(json)) as typeof json;
-                        return bytesToHex(jsonToMcbor(again));
+                        return bytesToHex(jsonToMcbor(again, AS_SPECIFIED));
                     },
                     bytesToHex(bytes),
                     () => `${bytesToHex(bytes)}\n  platform: ${platformCheck(bytes)}`,
@@ -194,7 +203,7 @@ describe('the profile round-trips', () => {
         fc.assert(
             fc.property(anyReading, reading => {
                 const bytes = encodeCbor(reading);
-                assertStable(() => bytesToHex(jsonToMcbor(mcborToJson(bytes))),
+                assertStable(() => bytesToHex(jsonToMcbor(mcborToJson(bytes), AS_SPECIFIED)),
                              bytesToHex(bytes),
                              () => bytesToHex(bytes));
             }),

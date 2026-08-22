@@ -100,14 +100,21 @@ What JSON cannot hold exactly is refused rather than rounded: an integer beyond
 2^53 is an error, not the nearest double. Byte strings, floats and dates
 convert one way, and say so.
 
-By default every string is tried against the reading grammar, which is what
-makes the round trip work without configuration. That has a documented hazard —
-a prose field holding `"1 h"` becomes one hour — so an application with a schema
-can decide instead:
+**Which strings are readings is the caller's decision, and there is no default
+guess.** `readings` defaults to `'none'`: a string stays a string. Turning a
+prose field into a measurement is the failure nothing downstream can notice —
+the result is a perfectly well-formed reading of something nobody measured — so
+it is not something a caller gets without asking.
 
 ```ts
-jsonToMcbor(json, { readings: (text, path) => path.at(-1) === 'energy' });
+jsonToMcbor(json, { readings: 'auto' });                                  // try every string
+jsonToMcbor(json, { readings: (text, path) => path.at(-1) === 'energy' }); // or decide per path
 ```
+
+`'auto'` tries every string against the reading grammar, which is what recovers
+a document nobody described and what the round trip above needs. Its hazard is
+the documented one: a free-text field holding `"1 h"` becomes one hour. An
+application with a schema should use the predicate.
 
 ## A reading as text
 
