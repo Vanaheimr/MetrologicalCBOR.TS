@@ -117,9 +117,9 @@ describe('one meter reading, unsigned', () => {
 
     it('reads as the diagnostic notation the specification prints', () => {
         expect(diagnostic(reading)).toBe(
-            '{"meter": "1ISA0000000042", "transaction": "a4f1c9e2", ' +
-            '"context": "Transaction.Begin", "time": 0("2026-08-15T08:14:00Z"), ' +
-            '"energy": 44252([4([-3, 1234567]), 2, 3, {1: 4([-1, 123]), 2: 2, 3: 4([-2, 95]), 4: 1}])}',
+            '{"time": 0("2026-08-15T08:14:00Z"), "meter": "1ISA0000000042", ' +
+            '"energy": 44252([4([-3, 1234567]), 2, 3, {1: 4([-1, 123]), 2: 2, 3: 4([-2, 95]), 4: 1}]), ' +
+            '"context": "Transaction.Begin", "transaction": "a4f1c9e2"}',
         );
     });
 
@@ -215,15 +215,27 @@ describe('the complete record', () => {
 
     });
 
-    it('carries a payload that is not, and strict mode says so on that layer', () => {
+    it('carries a payload that is deterministic on its own layer too', () => {
 
-        // Inside, the meter reading is a map in a human order — meter,
-        // transaction, context, time, energy — rather than the bytewise order
-        // a deterministic encoding sorts them into. That is not a defect:
-        // Section 6 makes its claim about the metrological value, not about
-        // whatever structure carries it.
-        expect(() => decode(hexToBytes(METER_READING_HEX), { strict: true }))
-            .toThrow(/lexicographic order/);
+        // Inside, the meter reading is a map sorted by encoded key rather
+        // than in the order a person writes one down — time, meter, energy,
+        // context, transaction. It did not have to be: Section 6 makes its
+        // claim about the metrological value, not about whatever structure
+        // carries it, and until 2026-08-22 the document was in reading order
+        // and strict mode refused it here.
+        //
+        // The document was regenerated because that cost it something real. A
+        // record like this is received, parsed and forwarded, and whoever
+        // forwards it re-encodes it deterministically; a signature over a
+        // spelling nobody downstream reproduces fails in a way that looks
+        // exactly like tampering.
+        expect(() => decode(hexToBytes(METER_READING_HEX), { strict: true })).not.toThrow();
+
+        // Which is the property in one line: decoded and encoded again by a
+        // deterministic encoder, the payload is the payload.
+        expect(bytesToHex(encode(decode(hexToBytes(METER_READING_HEX)),
+                                 { mapKeys: 'sorted', floats: 'shortest' })))
+            .toBe(METER_READING_HEX);
 
     });
 

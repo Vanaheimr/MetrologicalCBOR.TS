@@ -13,6 +13,15 @@ was waiting on is done: IANA registered tag 44252 on 2026-08-19 — see
 
 ### Changed
 
+- **The worked signed example was regenerated.** Its payloads are now the
+  deterministic encoding of themselves, so the maps read in sorted order
+  rather than in reading order. The record is the same 713 bytes and every
+  signature within it still verifies; what changed is that a receiver can
+  decode it, encode it again and forward it without breaking the signatures —
+  which is what the specification's Section 6 now says a signed document
+  SHOULD allow. `tests/vectors/signed-example.ts`, the two examples that carry
+  the record, and the fetched `spec/` copy follow.
+
 - **The README is written for a registry as well as for a repository.** Its
   links are absolute now, because a relative link that resolves on GitHub need
   not resolve on an npm page, and four of the nine targets —
