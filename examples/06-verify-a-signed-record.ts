@@ -46,7 +46,7 @@ interface EcdsaCurve {
     verify(signature: Uint8Array, message: Uint8Array, publicKey: Uint8Array,
            options?: { prehash?: boolean; lowS?: boolean }): boolean;
     sign(message: Uint8Array, privateKey: Uint8Array,
-         options?: { prehash?: boolean }): Uint8Array;
+         options?: { prehash?: boolean; lowS?: boolean }): Uint8Array;
 }
 
 try {
