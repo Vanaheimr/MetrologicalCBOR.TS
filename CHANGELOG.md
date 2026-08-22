@@ -22,6 +22,14 @@ was waiting on is done: IANA registered tag 44252 on 2026-08-19 — see
   the tarball it was handed, so the page for 0.10.0 keeps the README that
   0.10.0 shipped.
 
+- **The workflows run on actions that themselves run on Node 24.** GitHub has
+  deprecated Node 20 for actions and force-migrates the v4 generation of
+  `checkout` and `setup-node` onto Node 24, annotating every run to say so.
+  `actions/checkout`, `actions/setup-node` and `actions/upload-artifact` are on
+  v7 now, the same majors the rest of Vanaheimr uses. Nothing but the numbers
+  changed: `node-version`, `cache: npm` and the artifact upload are the plain
+  form every major since has kept stable.
+
 ## [0.10.0] — 2026-08-21
 
 **The first version published to npm**, on 2026-08-21 — by hand, with
