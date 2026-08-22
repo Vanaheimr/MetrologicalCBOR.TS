@@ -11,6 +11,17 @@ was waiting on is done: IANA registered tag 44252 on 2026-08-19 — see
 
 ## [Unreleased]
 
+## [0.11.0] — 2026-08-22
+
+A minor, and for the same reason 0.10.0 was one: it refuses something the
+version before it accepted. `readings` no longer guesses which JSON strings
+are measurements, and a default that decided that on the caller's behalf is
+exactly the kind of thing to change while 0.x still allows it.
+
+It is also the release that carries the README to npm. The entry below said
+the absolute links would reach the registry when the next version was cut —
+this is that version, and the page npm renders changes with it.
+
 ### Changed
 
 - **BREAKING: `readings` defaults to `'none'`.** The JSON-to-mCBOR conversion
@@ -44,9 +55,9 @@ was waiting on is done: IANA registered tag 44252 on 2026-08-19 — see
   not resolve on an npm page, and four of the nine targets —
   `CONTRIBUTING.md`, `SECURITY.md` and two files under `examples/` — are
   deliberately not in the published package at all. No code changed, and none
-  of this reaches npm before the next version is cut: npm renders the README of
-  the tarball it was handed, so the page for 0.10.0 keeps the README that
-  0.10.0 shipped.
+  of it could reach npm before a version was cut: npm renders the README of the
+  tarball it was handed, so the page kept 0.10.0's own README until this
+  release replaced it.
 
 - **The workflows run on actions that themselves run on Node 24.** GitHub has
   deprecated Node 20 for actions and force-migrates the v4 generation of

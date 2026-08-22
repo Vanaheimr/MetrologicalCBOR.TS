@@ -5,6 +5,11 @@ coverage/
 *.tsbuildinfo
 .eslintcache
 
+# `npm pack` writes <name>-<version>.tgz into the repository root, which the
+# release procedure asks you to build and read rather than keep. A build
+# product like dist/, and never something this repository tracks.
+*.tgz
+
 # examples/package.json keeps @noble/curves out of the library's own dependency
 # tree, so the signature-verification example needs its own install.
 examples/node_modules/
