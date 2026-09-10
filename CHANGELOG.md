@@ -11,6 +11,18 @@ was waiting on is done: IANA registered tag 44252 on 2026-08-19 — see
 
 ## [Unreleased]
 
+### Changed
+
+- **The test and lint toolchain moved up, and one step of it closes an
+  advisory.** `vitest` and `@vitest/coverage-v8` go to 4.1.11, the first
+  release outside GHSA-82fw-gwwq-j7x9 — a path traversal through
+  `@vitest/mocker`'s redirect mock, which the nightly dependency audit began
+  failing on once the advisory was published. `eslint` 10.10.0,
+  `typescript-eslint` 8.70.0, `globals` 17.12.0 and `tsx` 4.23.13 come along
+  in the same pass. Every one of these is a development dependency: the
+  published package has none at runtime, so nothing an installer receives
+  changes, and neither does any behaviour of the library.
+
 ## [0.11.0] — 2026-08-22
 
 A minor, and for the same reason 0.10.0 was one: it refuses something the
