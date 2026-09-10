@@ -23,6 +23,14 @@ was waiting on is done: IANA registered tag 44252 on 2026-08-19 — see
   published package has none at runtime, so nothing an installer receives
   changes, and neither does any behaviour of the library.
 
+- **The tarball test reads both shapes `npm pack --json` has had.** npm 12
+  returns an object keyed by package name where npm 11 and earlier returned an
+  array of reports, one per packed package. `tests/bundle.test.ts` took the
+  first element of an array and so stopped parsing on npm 12, on a morning when
+  the CI matrix — still on the older npm — was green on the same commit. It
+  accepts either now, because the runners and a maintainer's machine will be on
+  different npm versions for a while and both answers are correct.
+
 ## [0.11.0] — 2026-08-22
 
 A minor, and for the same reason 0.10.0 was one: it refuses something the

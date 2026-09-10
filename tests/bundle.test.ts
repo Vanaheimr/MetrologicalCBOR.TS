@@ -265,10 +265,19 @@ describe.runIf(built)('what would be published', () => {
     // combination that earns a deprecation warning. Nothing here is interpolated.
     beforeAll(() => {
 
-        report = (JSON.parse(
+        const packed = JSON.parse(
             execSync('npm pack --dry-run --json',
                      { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }),
-        ) as PackReport[])[0]!;
+        ) as PackReport[] | Record<string, PackReport>;
+
+        // npm changed the shape of this in 12: through npm 11 it was an array
+        // of reports, one per packed package, and it is now an object keyed by
+        // package name. Both are read because the runners and a maintainer's
+        // machine are not on the same npm and will not be for a while - the
+        // CI matrix was green on the array form the same morning this stopped
+        // parsing on npm 12.0.2 locally. There is one package either way, so
+        // the first entry is the report regardless of what holds it.
+        report = (Array.isArray(packed) ? packed[0] : Object.values(packed)[0])!;
 
         paths = report.files.map(file => file.path.replace(/\\/g, '/'));
 
