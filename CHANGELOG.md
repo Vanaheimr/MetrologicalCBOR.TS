@@ -23,6 +23,12 @@ was waiting on is done: IANA registered tag 44252 on 2026-08-19 — see
   published package has none at runtime, so nothing an installer receives
   changes, and neither does any behaviour of the library.
 
+- **`source-map-js` is on 1.2.2**, the first release outside
+  GHSA-68fv-2mgg-jv7q, an event-loop denial of service through indexed
+  source-map section offsets. It arrives twice, through `@vitest/coverage-v8`
+  and through `tsup`, both development dependencies; the lock file moved and
+  nothing else did.
+
 - **The tarball test reads both shapes `npm pack --json` has had.** npm 12
   returns an object keyed by package name where npm 11 and earlier returned an
   array of reports, one per packed package. `tests/bundle.test.ts` took the
