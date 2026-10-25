@@ -11,6 +11,18 @@ export default defineConfig({
     // test that fails only under load is worse than a slow one: it reports a
     // timeout with no counterexample, which reads exactly like a real defect.
     testTimeout: 120_000,
+
+    // Hooks are budgeted separately, and the default is 10 s. That is not
+    // enough for the `beforeAll` of `tests/bundle.test.ts`, which shells out
+    // to `npm pack --dry-run` to ask what would be published: measured on
+    // 2026-10-25, cold and straight after `npm ci`, it went past 10 s and the
+    // suite reported a hook timeout with no failing assertion - the exact
+    // shape of failure the line above exists to remove, and harder to read,
+    // because a dead hook skips the tests that would have said what broke.
+    // Warm, the same file runs in 1.6 s. A budget that depends on what the
+    // package cache happens to hold is not a budget.
+    hookTimeout: 120_000,
+
     coverage: {
       provider:  'v8',
       reporter:  ['text', 'lcov'],
