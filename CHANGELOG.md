@@ -11,6 +11,18 @@ was waiting on is done: IANA registered tag 44252 on 2026-08-19 — see
 
 ## [Unreleased]
 
+## [0.11.1] — 2026-10-25
+
+A patch: one conversion wrote the wrong millisecond and now writes the
+right one. `mcborToJsonText` over a tag 1 that wraps a float is the only
+output that changes, nothing is refused that was accepted, and the text keeps
+its form. The specification states the rule since the same day
+(metrological-text.md §3.1, with seven vectors in its annex), and Vanaheimr
+Styx already followed it, so the two implementations now write the same text
+for the same bytes. Everything else here is development-side — a toolchain on
+current majors, three closed coverage gaps, two advisories — and reaches no
+installer.
+
 ### Changed
 
 - **The test and lint toolchain moved up, and one step of it closes an
