@@ -54,6 +54,21 @@ was waiting on is done: IANA registered tag 44252 on 2026-08-19 — see
   accepts either now, because the runners and a maintainer's machine will be on
   different npm versions for a while and both answers are correct.
 
+### Fixed
+
+- **A float epoch time is written as the millisecond it was written with.**
+  `mcborToJsonText` turned tag 1 over a float into milliseconds by truncating
+  `seconds × 1000`, and that product lands below the integer often enough to
+  matter: `1075906714.949` came out as `.948`. Truncating the double
+  exactly is no better, because `1724096411.001` *is* a double a little below
+  `.001`, as is about every other value written with three decimals. The
+  seconds are now rounded to the microsecond first and only the rest below the
+  millisecond is cut, toward the past before the epoch as after it — the rule
+  Vanaheimr Styx adopted on 2026-10-09, so that the two implementations write
+  the same text for the same bytes. NaN and the infinities, which denote no
+  instant, are refused with `ERR_JSON_UNSUPPORTED` instead of escaping as a
+  `RangeError` from `BigInt`. An integer epoch time is unaffected.
+
 ## [0.11.0] — 2026-08-22
 
 A minor, and for the same reason 0.10.0 was one: it refuses something the

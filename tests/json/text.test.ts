@@ -539,6 +539,28 @@ describe('what the exact path refuses', () => {
             expect(jsonOf('C1F93C00')).toBe('"1970-01-01T00:00:01.000Z"');
         });
 
+        it('writes the millisecond a float was written with, not the one below it', () => {
+            // Each of these doubles lies a hair below the millisecond it was
+            // written as; truncating the double, or its product with 1000,
+            // writes the millisecond before. Rounded to the microsecond first,
+            // as Vanaheimr Styx does, they are what they say.
+            expect(jsonOf('C1FB41D9B0E7E6C01062')).toBe('"2024-08-19T19:40:11.001Z"');   // 1724096411.001
+            expect(jsonOf('C1FB41D0084226BCBC6A')).toBe('"2004-02-04T14:58:34.949Z"');   // 1075906714.949
+            expect(jsonOf('C1FB41D64A0A9401CAC0')).toBe('"2017-05-26T13:14:56.028Z"');   // 1495804496.0279999
+        });
+
+        it('cuts below the millisecond toward the past, before the epoch as after it', () => {
+            // -0.0005 s is half a millisecond before midnight 1970, and its
+            // text says 23:59:59.999 of the day before, not 00:00:00.000.
+            expect(jsonOf('C1FBBF40624DD2F1A9FC')).toBe('"1969-12-31T23:59:59.999Z"');
+        });
+
+        it('refuses a float epoch time that denotes no instant', () => {
+            expect(codeOf(() => jsonOf('C1F97E00'))).toBe('ERR_JSON_UNSUPPORTED');   // NaN
+            expect(codeOf(() => jsonOf('C1F97C00'))).toBe('ERR_JSON_UNSUPPORTED');   // +Infinity
+            expect(codeOf(() => jsonOf('C1F9FC00'))).toBe('ERR_JSON_UNSUPPORTED');   // -Infinity
+        });
+
         it('takes a bignum that a reader handed over as an integer', () => {
             // This reader normalises tags 2 and 3 into integers, so the branch
             // is reachable only from a caller passing the item itself — which

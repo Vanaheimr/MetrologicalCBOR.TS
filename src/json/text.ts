@@ -299,12 +299,43 @@ function decimalFractionText(value: CborValue, path: JsonPath): string {
 }
 
 
+/**
+ * The millisecond that epoch seconds written as a float fall in.
+ *
+ * Truncating the double itself is the obvious reading of "sub-millisecond
+ * content truncated" and the wrong one: 1724096411.001 is a double a little
+ * below .001, and so is about every second value written with three decimals,
+ * which would become the millisecond before the one written. Multiplying by
+ * 1000 first does not help either, because the product is rounded as well and
+ * lands on whichever side it lands - 1075906714.949 came out as .948.
+ *
+ * So the seconds are rounded to the microsecond first, which a double of epoch
+ * seconds holds exactly for every instant this format can write, and only the
+ * rest below the millisecond is cut, toward the past as the text of an instant
+ * is cut. That is the rule of the C# implementation in Vanaheimr Styx, half
+ * away from zero included, so the two write the same text for the same bytes.
+ */
+function floatMilliseconds(seconds: number, path: JsonPath): bigint {
+
+    if (!Number.isFinite(seconds))
+        throw unsupported(`An epoch time of ${String(seconds)} seconds denotes no instant.`, path);
+
+    const microseconds = BigInt(Math.sign(seconds) * Math.round(Math.abs(seconds) * 1_000_000));
+    const milliseconds = microseconds / 1000n;
+
+    return microseconds < 0n && microseconds % 1000n !== 0n
+               ? milliseconds - 1n
+               : milliseconds;
+
+}
+
+
 /** An epoch time as `YYYY-MM-DDThh:mm:ssZ` text with millisecond precision. */
 function epochText(value: CborValue & { type: 'int' | 'float' }, path: JsonPath): string {
 
     const milliseconds = value.type === 'int'
                              ? value.value * 1000n
-                             : BigInt(Math.trunc(value.value * 1000));
+                             : floatMilliseconds(value.value, path);
 
     // The range Date supports, ±8.64e15 ms around the epoch.
     if (milliseconds > 8640000000000000n || milliseconds < -8640000000000000n)
