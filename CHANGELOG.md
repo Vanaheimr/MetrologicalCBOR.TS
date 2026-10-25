@@ -23,6 +23,15 @@ was waiting on is done: IANA registered tag 44252 on 2026-08-19 — see
   published package has none at runtime, so nothing an installer receives
   changes, and neither does any behaviour of the library.
 
+- **The development toolchain is on current majors where it can be.**
+  `vitest` and `@vitest/coverage-v8` move to 5, `tsup` to 9, the rest to
+  their newest minors. tsup 9 brings esbuild 0.28.2, which closes the low
+  GHSA-g7r4-m6w7-qqqr that tsup 8's `^0.27.0` had held open since September,
+  and `markdown-it` under typedoc moves to 14.3.3 for GHSA-vfgh-jcmw-g37q and
+  GHSA-gfr2-rv44-r23c; `npm audit` reports nothing at any level. TypeScript
+  stays on 6: neither typescript-eslint 8.72 nor typedoc 0.28.20, both the
+  newest releases, accepts 7 yet. The built bundle does not change.
+
 - **`source-map-js` is on 1.2.2**, the first release outside
   GHSA-68fv-2mgg-jv7q, an event-loop denial of service through indexed
   source-map section offsets. It arrives twice, through `@vitest/coverage-v8`
