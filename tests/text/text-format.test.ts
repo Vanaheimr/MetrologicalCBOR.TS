@@ -425,6 +425,13 @@ describe('the uncertainty', () => {
         expect(codeOf(() => parseMetrologicalValue(`(5 ${PLUS_MINUS}1) A, nu=45, ν=45`))).toBe('ERR_TEXT_SYNTAX');
     });
 
+    it('accepts t for student-t, and writes the long form', () => {
+        // The short spelling is accepted on input only; what is written is the
+        // one spelling the text format has (metrological-text §2.6).
+        expect(formatMetrologicalValue(parseMetrologicalValue(`(5 ${PLUS_MINUS}1) A, k=2, ν=9, dist=t`)))
+            .toBe(`(5 ${PLUS_MINUS}1) A, k=2, dist=student-t, ν=9`);
+    });
+
     it('rejects an unknown distribution', () => {
         expect(codeOf(() => parseMetrologicalValue(`(5 ${PLUS_MINUS}1) A, dist=bimodal`)))
             .toBe('ERR_UNCERTAINTY_DISTRIBUTION');

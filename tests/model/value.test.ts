@@ -215,6 +215,20 @@ describe('affine units', () => {
 
     });
 
+    it('are not the same quantity across a prefix, and saying so does not throw', () => {
+
+        // 21.5 °C is a temperature, 21500 m°C a difference of 21.5 degrees; no
+        // scaling relates the two, which is why compareQuantity refuses. The
+        // question whether they are the same quantity still has an answer.
+        const milli = metrologicalValue({
+            value: integer(21500), unit: unitById(Units.DegreeCelsius), prefix: SIPrefix.Milli,
+        });
+
+        expect(sameQuantity(celsius, milli)).toBe(false);
+        expect(sameQuantity(milli, milli.with({}))).toBe(true);
+
+    });
+
 });
 
 

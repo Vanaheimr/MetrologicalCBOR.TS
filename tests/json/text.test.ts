@@ -92,6 +92,7 @@ describe('CBOR to JSON text', () => {
     it('refuses what JSON cannot say', () => {
         expect(codeOf(() => jsonOf('81F97E00'))).toBe('ERR_JSON_UNSUPPORTED');   // NaN
         expect(codeOf(() => jsonOf('81F7'))).toBe('ERR_JSON_UNSUPPORTED');       // undefined
+        expect(codeOf(() => jsonOf('81F0'))).toBe('ERR_JSON_UNSUPPORTED');       // simple(16)
         expect(codeOf(() => jsonOf('A10126'))).toBe('ERR_JSON_KEY');             // integer key
         expect(codeOf(() => jsonOf('A2616101616102'))).toBe('ERR_CBOR_DUPLICATE_KEY');
     });

@@ -23,6 +23,14 @@ was waiting on is done: IANA registered tag 44252 on 2026-08-19 — see
   published package has none at runtime, so nothing an installer receives
   changes, and neither does any behaviour of the library.
 
+- **Coverage is complete again.** Three reachable branches had no test:
+  `dist=t`, accepted as the short spelling of `student-t` since 0.10.0 and
+  never once given; a simple value on the exact JSON text path, refused like
+  `undefined` but only ever tested on the tree path; and `sameQuantity` on two
+  Celsius readings across a prefix, which answers `false` exactly where
+  `compareQuantity` refuses. Each has one now, and statements, branches,
+  functions and lines read 100% under vitest 5.
+
 - **The development toolchain is on current majors where it can be.**
   `vitest` and `@vitest/coverage-v8` move to 5, `tsup` to 9, the rest to
   their newest minors. tsup 9 brings esbuild 0.28.2, which closes the low
