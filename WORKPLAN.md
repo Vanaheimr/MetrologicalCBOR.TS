@@ -394,6 +394,19 @@ The three key identifiers are recomputed as well, as RFC 9679 thumbprints over t
 
   Five of the six trailing escapes are substituted; the sixth is the `\\` that does the poisoning, where the wrong answer happens to be the right one. Two things follow. It is **not fixed on the current line** — v26.7.0 was the newest release that day. And the break falls between **V8 12.4 and 13.6**, which brackets it to the 22 → 24 jump rather than to anything recent. Added to [nodejs/node#63785](https://github.com/nodejs/node/issues/63785), where the thread held single data points and a guess about 20 and 22.
 
+  **Fixed, and the nightly is how we know (2026-11-01).** V8 took it on main as [93cd21e](https://chromium.googlesource.com/v8/v8/+/93cd21e8254b65c15ff131b2dcadf19beadb559d) on 2026-09-17 — *"skip fast transition path for escaped keys"*, crbug 521080746 — and the issue closed as completed on 2026-10-26. What matters here is not the closure but the backport, because a fix on main is not a fix a user has. The nightly answers that without anyone asking upstream:
+
+  | Node | V8 | 2026-08-22 | 2026-11-01 |
+  |---|---|---|---|
+  | v20.20.2 | 11.3.244.8 | clean | clean |
+  | v22.23.4 | 12.4.254.21 | clean | clean |
+  | **v24.22.1** | **13.6.233.17** | **loses 5 of 36** | **clean** |
+  | latest | — | loses 5 of 36 | clean |
+
+  The 26 line carries it too, and that one needs a word of warning: a maintainer's machine on **v26.12.1** reads every key back, while the August table has **v26.7.0** losing five - and both report V8 **14.6.202.34**. The V8 version string did not move; the Node build behind it did. Comparing those two rows on the V8 number alone would read as the same engine behaving two ways.
+
+  So the same V8 line that broke it carries the fix now, and every supported Node reads every escaped key back. **The job stays**, and its reason changes: it was built to watch a live defect and is now a regression guard, which is the cheaper and longer-lived of the two jobs. Nothing in `src/` ever called `JSON.parse`, so nothing here was ever at risk — what was at risk was believing a property test that had told the truth.
+
 - **ECDSA's low-S convention is a real interoperability trap.** The meter signs without normalising `s`, and several libraries — noble among them — reject a high-S signature by default under an anti-malleability policy that Bitcoin made conventional and COSE does not impose. Four hours of "the signature is wrong" is one `lowS: false` away from "the signature is fine", and the failure looks exactly like a bad encoder. Named in the example and in `examples/README.md`.
 - **The build wrote `sourceMappingURL` twice** into every bundle, once itself and once through esbuild. Harmless, and wrong in an artifact that goes to a registry and stays there. `scripts/finish-build.ts` keeps one, and a test asserts it.
 - **The published package would have carried the generated API reference** — 272 files of HTML, tripling the tarball — because the `files` manifest named `docs` wholesale. It names `docs/*.md` now, and `tests/bundle.test.ts` asserts the whole shape of what would be published rather than trusting the manifest.
