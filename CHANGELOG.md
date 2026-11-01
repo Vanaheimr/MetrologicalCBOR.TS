@@ -11,6 +11,26 @@ was waiting on is done: IANA registered tag 44252 on 2026-08-19 — see
 
 ## [Unreleased]
 
+### Changed
+
+- **The development dependencies are on their newest releases that fit.**
+  `eslint` 10.14.0, `typescript-eslint` 8.72.1, `globals` 17.14.0,
+  `@types/node` 26.6.6 and the transitive tree within its ranges; the
+  examples take `@noble/curves` 2.4.0, and all four signatures over the worked
+  record still verify with it. TypeScript stays on 6 for the reason it stayed
+  there before: typescript-eslint 8.72.1 and typedoc 0.28.20 accept nothing
+  newer.
+
+  One advisory stays open on purpose. GHSA-g3hv-75wg-m249 (moderate, a
+  denial of service in `minimatch` through amplified glob patterns) is fixed
+  only in `minimatch` 11, and eslint, `@eslint/config-array`,
+  typescript-estree and typedoc all ask for `^10` in their newest releases.
+  Overriding to 11 was tried: eslint and the suite run, typedoc fails with
+  `mini.matchOne is not a function`. The nightly audit therefore stays red
+  until those packages move, which is what it is for. The globs it concerns are
+  this repository's own configuration, and the package has no runtime
+  dependencies.
+
 ## [0.11.1] — 2026-10-25
 
 A patch: one conversion wrote the wrong millisecond and now writes the
