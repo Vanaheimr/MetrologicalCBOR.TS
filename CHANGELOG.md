@@ -11,6 +11,18 @@ was waiting on is done: IANA registered tag 44252 on 2026-08-19 — see
 
 ## [Unreleased]
 
+## [0.12.0] — 2026-11-01
+
+A minor, because it refuses something the version before it accepted: a
+tag 1 outside the years 0001 to 9999, which 0.11.1 wrote in ISO 8601's
+expanded form (`+010000-01-01…`) and the specification now requires a
+converter to refuse. Inside the range nothing changes, and nothing else in
+the library does either. The specification states the range since the same
+day (metrological-text.md §3.1, seven vectors in its annex), and Vanaheimr
+Styx refuses the same instants, so the two implementations agree on both
+sides of each edge. The rest is development-side: the dependencies on their
+newest releases that fit, and the one advisory that cannot be closed yet.
+
 ### Changed
 
 - **The development dependencies are on their newest releases that fit.**
