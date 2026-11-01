@@ -62,6 +62,10 @@ const TAG_MIME_MESSAGE     = 36n;
 const TAG_UUID             = 37n;
 const TAG_SELF_DESCRIBED   = 55799n;
 
+/** 0001-01-01T00:00:00.000Z and 9999-12-31T23:59:59.999Z, in milliseconds since the epoch. */
+const FIRST_INSTANT        = -62135596800000n;
+const LAST_INSTANT         = 253402300799999n;
+
 const MAX_DEPTH            = 64;
 const MAX_DECIMAL_EXPONENT = 65536n;
 
@@ -337,9 +341,13 @@ function epochText(value: CborValue & { type: 'int' | 'float' }, path: JsonPath)
                              ? value.value * 1000n
                              : floatMilliseconds(value.value, path);
 
-    // The range Date supports, ±8.64e15 ms around the epoch.
-    if (milliseconds > 8640000000000000n || milliseconds < -8640000000000000n)
-        throw unsupported(`An epoch time of ${String(value.value)} seconds is beyond the representable range.`, path);
+    // The text has four digits for the year, so it can say 0001 to 9999 and
+    // nothing else. Date could write beyond that, as +010000 or -000002, which
+    // is ISO 8601's expanded form and not the form metrological-text §3.1
+    // prescribes; the same range is where .NET's DateTimeOffset and Python's
+    // datetime end, so this is also where another implementation stops.
+    if (milliseconds < FIRST_INSTANT || milliseconds > LAST_INSTANT)
+        throw unsupported(`An epoch time of ${String(value.value)} seconds lies outside the years 0001 to 9999.`, path);
 
     return new Date(Number(milliseconds)).toISOString();
 

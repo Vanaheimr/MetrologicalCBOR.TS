@@ -38,6 +38,20 @@ was waiting on is done: IANA registered tag 44252 on 2026-08-19 — see
   this repository's own configuration, and the package has no runtime
   dependencies.
 
+### Fixed
+
+- **A tag 1 outside the years 0001 to 9999 is refused instead of written in
+  another form.** `mcborToJsonText` handed every instant JavaScript's `Date`
+  can hold to `toISOString`, which writes the year 10000 as `+010000` and the
+  years before 0000 with a sign and six digits — ISO 8601's expanded form, not
+  the `YYYY-MM-DDThh:mm:ss.fffZ` metrological-text.md §3.1 prescribes. Vanaheimr
+  Styx refused the same bytes, so the two implementations parted there, and
+  nothing caught it because no vector covered it. The specification now names
+  the range — 0001-01-01T00:00:00.000Z to 9999-12-31T23:59:59.999Z, where .NET's
+  `DateTimeOffset` and Python's `datetime` also end — and requires a converter
+  to refuse what lies outside, as `ERR_JSON_UNSUPPORTED` here. Seven vectors
+  in the specification's annex carry both edges, for integers and floats.
+
 ## [0.11.1] — 2026-10-25
 
 A patch: one conversion wrote the wrong millisecond and now writes the

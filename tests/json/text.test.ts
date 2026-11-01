@@ -555,6 +555,23 @@ describe('what the exact path refuses', () => {
             expect(jsonOf('C1FBBF40624DD2F1A9FC')).toBe('"1969-12-31T23:59:59.999Z"');
         });
 
+        it('writes the first and the last instant a four-digit year can name', () => {
+            expect(jsonOf('C13B0000000E7791F6FF')).toBe('"0001-01-01T00:00:00.000Z"');       // -62135596800
+            expect(jsonOf('C11B0000003AFFF4417F')).toBe('"9999-12-31T23:59:59.000Z"');       // 253402300799
+            expect(jsonOf('C1FBC22CEF23EE000000')).toBe('"0001-01-01T00:00:00.000Z"');       // as a float
+            expect(jsonOf('C1FB424D7FFA20BFFFDF')).toBe('"9999-12-31T23:59:59.999Z"');       // 253402300799.999
+        });
+
+        it('refuses an instant before 0001 or after 9999, rather than write a year of other width', () => {
+            // Date would write these as +010000-01-01 and -000001-12-31: ISO
+            // 8601's expanded years, which the YYYY of metrological-text
+            // §3.1 does not admit and another implementation would refuse.
+            expect(codeOf(() => jsonOf('C11B0000003AFFF44180'))).toBe('ERR_JSON_UNSUPPORTED');   // 253402300800
+            expect(codeOf(() => jsonOf('C13B0000000E7791F700'))).toBe('ERR_JSON_UNSUPPORTED');   // -62135596801
+            expect(codeOf(() => jsonOf('C1FB424D7FFA20C00000'))).toBe('ERR_JSON_UNSUPPORTED');   // 253402300800.0
+            expect(codeOf(() => jsonOf('C1FBC22CEF23EE000083'))).toBe('ERR_JSON_UNSUPPORTED');   // a millisecond before 0001
+        });
+
         it('refuses a float epoch time that denotes no instant', () => {
             expect(codeOf(() => jsonOf('C1F97E00'))).toBe('ERR_JSON_UNSUPPORTED');   // NaN
             expect(codeOf(() => jsonOf('C1F97C00'))).toBe('ERR_JSON_UNSUPPORTED');   // +Infinity
