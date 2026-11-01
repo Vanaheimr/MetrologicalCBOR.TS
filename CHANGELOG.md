@@ -26,8 +26,15 @@ was waiting on is done: IANA registered tag 44252 on 2026-08-19 — see
   only in `minimatch` 11, and eslint, `@eslint/config-array`,
   typescript-estree and typedoc all ask for `^10` in their newest releases.
   Overriding to 11 was tried: eslint and the suite run, typedoc fails with
-  `mini.matchOne is not a function`. The nightly audit therefore stays red
-  until those packages move, which is what it is for. The globs it concerns are
+  `mini.matchOne is not a function`. The cause is the directory layout, not
+  the configuration: minimatch 11 removed `matchOne`, and typedoc 0.28.20
+  still calls it from the glob walk that expands `entryPoints` — but only
+  when that walk descends into a subdirectory of `src/`. This repository
+  has six; COSE.TS has none, which is why the same override holds there
+  under an otherwise identical typedoc configuration, and an empty
+  subdirectory added to its `src/` reproduces the failure exactly. The
+  nightly audit therefore stays red until those packages move, which is
+  what it is for. The globs it concerns are
   this repository's own configuration, and the package has no runtime
   dependencies.
 
