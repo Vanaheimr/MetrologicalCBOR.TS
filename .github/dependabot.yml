@@ -1,0 +1,40 @@
+version: 2
+
+updates:
+
+  # The library has no runtime dependencies and must keep it that way, so
+  # everything here is tooling.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: daily
+    # A release inside a range updates the lock file; the range moves only
+    # for a release outside it.
+    versioning-strategy: increase-if-necessary
+    groups:
+      # eslint, vitest, typedoc and the rest: one pull request, not ten.
+      development:
+        dependency-type: development
+    ignore:
+      # typescript-eslint and typedoc accept nothing newer than TypeScript 6
+      # yet; a pull request for 7 could only fail.
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
+
+  # The signature-verification example's own @noble/curves. There is no lock
+  # file here and CI installs the newest release in range on every run, so
+  # only a release outside the range needs a pull request.
+  - package-ecosystem: npm
+    directory: /examples
+    schedule:
+      interval: weekly
+    versioning-strategy: increase-if-necessary
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns:
+          - '*'

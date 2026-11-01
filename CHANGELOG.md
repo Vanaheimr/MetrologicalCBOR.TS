@@ -11,6 +11,15 @@ was waiting on is done: IANA registered tag 44252 on 2026-08-19 — see
 
 ## [Unreleased]
 
+### Changed
+
+- **Dependabot opens pull requests for new releases** of the development
+  tooling, the examples' `@noble/curves` and the GitHub Actions
+  (`.github/dependabot.yml`). Ranges move only when a release lies outside
+  them, and TypeScript 7 is held back for as long as typescript-eslint and
+  typedoc do not accept it. The package itself is unaffected; it has no
+  runtime dependency.
+
 ## [0.12.0] — 2026-11-01
 
 A minor, because it refuses something the version before it accepted: a

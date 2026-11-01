@@ -297,6 +297,12 @@ Two hundred thousand cases per property is the nightly figure. What survived it,
 and where every normative requirement of the specification went, is in
 [docs/conformance.md](https://github.com/Vanaheimr/MetrologicalCBOR.TS/blob/master/docs/conformance.md).
 
+Dependabot opens the pull requests for new releases of what the work rests
+on — daily for the development tooling, in one, and weekly for the examples'
+`@noble/curves` and for the GitHub Actions — so that each arrives through CI
+like any other change. The library itself has no runtime dependency for it to
+update.
+
 The specification lives in
 [its own repository](https://github.com/OpenChargingTechnology/Whitepapers/tree/master/MetrologicalCBOR)
 and is not committed here — `npm run fetch:spec` retrieves it, and the suites
