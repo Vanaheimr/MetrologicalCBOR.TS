@@ -19,6 +19,10 @@ was waiting on is done: IANA registered tag 44252 on 2026-08-19 — see
   them, and TypeScript 7 is held back for as long as typescript-eslint and
   typedoc do not accept it. The package itself is unaffected; it has no
   runtime dependency.
+- **`tests/fuzz/text.test.ts` is text to Git again.** Its fuzz alphabet held
+  a raw NUL byte, so Git took the file for binary, showed no diffs for it and
+  left it out of the `.gitattributes` line-ending rule. The byte is now the
+  escape `\0`; the alphabet is the same string as before.
 
 ## [0.12.0] — 2026-11-01
 
