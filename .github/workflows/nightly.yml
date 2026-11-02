@@ -141,4 +141,19 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      - run: npm audit --audit-level=moderate
+      - name: Audit the dependency tree
+        # Red on GHSA-g3hv-75wg-m249 (moderate, a denial of service in
+        # minimatch through amplified glob patterns), and red until typedoc
+        # moves. The advisory is fixed from minimatch 11.0.1, and typedoc
+        # 0.28.20 — still the newest release, still asking for `minimatch ^10`
+        # — calls `mini.matchOne(...)` from `glob().shouldRecurse` whenever
+        # the walk that expands `entryPoints` descends into a subdirectory of
+        # `src/`, and this repository has six. minimatch kept `matchOne` public
+        # through 10.2.6 and left only the private `#matchOne` from 11.0.0 on,
+        # so in every release from 11.0.0 to 11.0.4 that call throws
+        # `TypeError: mini.matchOne is not a function`. Everything that closes
+        # the advisory therefore breaks `docs:api`, and there is no lower 11.x
+        # to pin: this step is not waiting on a release of minimatch but on
+        # typedoc. The globs are this repository's own configuration and the
+        # package has no runtime dependencies — CHANGELOG 0.12.0 has the rest.
+        run: npm audit --audit-level=moderate

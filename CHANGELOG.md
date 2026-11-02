@@ -19,6 +19,16 @@ was waiting on is done: IANA registered tag 44252 on 2026-08-19 — see
   them, and TypeScript 7 is held back for as long as typescript-eslint and
   typedoc do not accept it. The package itself is unaffected; it has no
   runtime dependency.
+- **The nightly audit step says why it is red, beside the step itself.**
+  GHSA-g3hv-75wg-m249 is fixed from `minimatch` 11.0.1, and `matchOne` — the
+  method typedoc 0.28.20 calls from `glob().shouldRecurse` — was public
+  through 10.2.6 and is only the private `#matchOne` from 11.0.0 on, in every
+  release up to 11.0.4. So no version both closes the advisory and keeps
+  `docs:api` running, and there is no lower 11.x to pin: this step is not
+  waiting on a release of minimatch but on typedoc, whose newest release is
+  still 0.28.20 and still asks for `minimatch ^10`. That reasoning now sits
+  in `.github/workflows/nightly.yml` next to the step that goes red, where
+  the next look at it starts rather than beginning again.
 - **`tests/fuzz/text.test.ts` is text to Git again.** Its fuzz alphabet held
   a raw NUL byte, so Git took the file for binary, showed no diffs for it and
   left it out of the `.gitattributes` line-ending rule. The byte is now the
