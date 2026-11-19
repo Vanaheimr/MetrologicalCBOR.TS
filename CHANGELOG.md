@@ -33,6 +33,11 @@ was waiting on is done: IANA registered tag 44252 on 2026-08-19 — see
   a raw NUL byte, so Git took the file for binary, showed no diffs for it and
   left it out of the `.gitattributes` line-ending rule. The byte is now the
   escape `\0`; the alphabet is the same string as before.
+- **eslint 10.15.0 and typescript-eslint 8.73.0** (from 10.14.0 and 8.72.1),
+  with vitest and `@vitest/coverage-v8` 5.1.1 and fast-check 4.10.3. The two
+  linters now ask for `minimatch` 11 and leave GHSA-g3hv-75wg-m249 behind,
+  so the nightly audit is down from twelve findings to two, both through
+  typedoc, which is still 0.28.20 and still asks for `minimatch ^10`.
 
 ## [0.12.0] — 2026-11-01
 
